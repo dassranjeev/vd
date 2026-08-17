@@ -59,7 +59,9 @@ export const getSettings = unstable_cache(loadSettings, ["vd:settings"], {
 /* ───────────────────────── sections ───────────────────────── */
 
 function fallbackSections(): PublicSection[] {
-  return seedSections.map((section) => ({ ...section }));
+  // Fallback rows have no database identity, so the editor treats them as
+  // read-only (there is nothing to write to until the DB is seeded).
+  return seedSections.map((section) => ({ id: "", ...section }));
 }
 
 async function loadSections(): Promise<PublicSection[]> {
@@ -69,6 +71,7 @@ async function loadSections(): Promise<PublicSection[]> {
   try {
     const rows = await db
       .select({
+        id: sections.id,
         key: sections.key,
         type: sections.type,
         title: sections.title,

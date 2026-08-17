@@ -20,6 +20,10 @@ export type PublicVideo = {
 };
 
 export type PublicSection = {
+  /** Needed by the front-end editor to target reorder/hide/inline-edit actions.
+   *  Not a secret: it appears in the cached HTML, and every mutation that uses
+   *  it re-checks authentication server-side. */
+  id: string;
   key: string;
   type: string;
   title: string;
@@ -31,6 +35,16 @@ export type PublicSocialLink = {
   label: string;
   url: string;
 };
+
+/**
+ * Renderable section types.
+ *
+ * Lives here rather than beside the section actions because a `"use server"`
+ * module may only export async functions — exporting this array from there
+ * breaks module evaluation for every server action in the same graph.
+ */
+export const SECTION_TYPES = ["hero", "about", "videos", "contact", "richtext"] as const;
+export type SectionType = (typeof SECTION_TYPES)[number];
 
 /** Section-level options stored in `sections.config`. */
 export type SectionConfig = {

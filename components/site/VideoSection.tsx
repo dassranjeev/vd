@@ -1,8 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { Pencil } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
+import { Editable } from "@/components/editor/Editable";
+import { useEditor } from "@/components/editor/EditorProvider";
 import { sectionConfig, thumbnailFor, type PublicSection, type PublicVideo } from "@/lib/types";
 
 import { useVideoModal } from "./VideoModalProvider";
@@ -43,6 +47,9 @@ function PlayBadge({ size }: { size: "sm" | "md" }) {
   );
 }
 
+/** Seed fallback rows use synthetic ids and have no admin page to open. */
+const isRealId = (id: string) => /^[0-9a-f-]{36}$/i.test(id);
+
 function VideoCard({
   video,
   vertical,
@@ -52,11 +59,15 @@ function VideoCard({
   vertical: boolean;
   onOpen: () => void;
 }) {
+  const { editing } = useEditor();
+  const router = useRouter();
+  const canEdit = editing && isRealId(video.id);
+
   return (
     <button
       type="button"
-      onClick={onOpen}
-      aria-label={`Play ${video.title}`}
+      onClick={() => (canEdit ? router.push(`/admin/videos/${video.id}`) : onOpen())}
+      aria-label={canEdit ? `Edit ${video.title}` : `Play ${video.title}`}
       className={`group block cursor-pointer text-left transition-transform duration-500 ease-out hover:scale-[1.06] ${
         vertical ? "w-[220px] flex-shrink-0" : "w-full"
       }`}
@@ -77,7 +88,16 @@ function VideoCard({
           onError={(event) => handleThumbnailError(event, video.youtubeId)}
         />
 
-        <PlayBadge size={vertical ? "sm" : "md"} />
+        {canEdit ? (
+          <span className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-black/70 px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-white backdrop-blur-sm">
+              <Pencil className="size-3" />
+              Edit
+            </span>
+          </span>
+        ) : (
+          <PlayBadge size={vertical ? "sm" : "md"} />
+        )}
 
         <div className="absolute inset-x-0 bottom-0">
           <div
@@ -110,6 +130,7 @@ export function VideoSection({
   videos: PublicVideo[];
 }) {
   const { openVideo } = useVideoModal();
+  const { editing } = useEditor();
   const config = sectionConfig(section);
 
   const isMarquee = config.layout === "marquee";
@@ -142,7 +163,7 @@ export function VideoSection({
       style={{ backgroundColor: config.background || (vertical ? "#0a0a0a" : "#000000") }}
     >
       {/* Header */}
-      {(section.title || section.subtitle) && (
+      {(editing || section.title || section.subtitle) && (
         <div className="mb-14 px-8 md:px-20 lg:px-32">
           <motion.div
             initial={{ opacity: 0 }}
@@ -151,9 +172,27 @@ export function VideoSection({
             className="mx-auto flex max-w-[1100px] items-end justify-between border-b border-white/10 pb-5"
           >
             <h3 className="text-xs font-medium uppercase tracking-widest text-white/40">
-              {section.title}
+              {section.id ? (
+                <Editable
+                  value={section.title}
+                  target={{ kind: "section", id: section.id, field: "title" }}
+                  placeholder="Section heading"
+                />
+              ) : (
+                section.title
+              )}
             </h3>
-            <span className="text-xs tracking-widest text-white/25">{section.subtitle}</span>
+            <span className="text-xs tracking-widest text-white/25">
+              {section.id ? (
+                <Editable
+                  value={section.subtitle}
+                  target={{ kind: "section", id: section.id, field: "subtitle" }}
+                  placeholder="Meta"
+                />
+              ) : (
+                section.subtitle
+              )}
+            </span>
           </motion.div>
         </div>
       )}

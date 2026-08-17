@@ -1,3 +1,6 @@
+import { EditorProvider } from "@/components/editor/EditorProvider";
+import { EditorToolbar } from "@/components/editor/EditorToolbar";
+import { SectionFrame } from "@/components/editor/SectionFrame";
 import { About } from "@/components/site/About";
 import { Analytics } from "@/components/site/Analytics";
 import { Contact } from "@/components/site/Contact";
@@ -41,7 +44,7 @@ export default async function HomePage() {
     );
   }
 
-  function renderSection(section: PublicSection) {
+  function renderSectionBody(section: PublicSection) {
     switch (section.type) {
       case "hero":
         return (
@@ -68,6 +71,28 @@ export default async function HomePage() {
     }
   }
 
+  /**
+   * Each band is wrapped so the front-end editor can offer reorder/hide controls
+   * on hover. The wrapper is layout-neutral and inert for visitors.
+   */
+  function renderSection(section: PublicSection, index: number) {
+    const body = renderSectionBody(section);
+    if (!body) return null;
+
+    return (
+      <SectionFrame
+        key={section.key}
+        id={section.id}
+        type={section.type}
+        label={section.title}
+        isFirst={index === 0}
+        isLast={index === sections.length - 1}
+      >
+        {body}
+      </SectionFrame>
+    );
+  }
+
   const jsonLd = settings.seo.structuredData
     ? {
         "@context": "https://schema.org",
@@ -89,10 +114,13 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <VideoModalProvider>
-        {sections.map(renderSection)}
-        <Footer credit={settings.site.footerCredit} social={social} />
-      </VideoModalProvider>
+      <EditorProvider>
+        <VideoModalProvider>
+          {sections.map(renderSection)}
+          <Footer credit={settings.site.footerCredit} social={social} />
+        </VideoModalProvider>
+        <EditorToolbar />
+      </EditorProvider>
 
       {jsonLd && (
         <script

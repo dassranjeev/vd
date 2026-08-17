@@ -3,6 +3,8 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
 
+import { Editable } from "@/components/editor/Editable";
+import { useEditor } from "@/components/editor/EditorProvider";
 import type { SettingsShape } from "@/lib/settings";
 import type { PublicSocialLink } from "@/lib/types";
 
@@ -24,12 +26,13 @@ export function Hero({
   const heroScale = useTransform(scrollYProgress, [0, 1], [1, 1.06]);
   const nameY = useTransform(scrollYProgress, [0, 1], [0, -40]);
 
+  const { editing } = useEditor();
   const roles = site.roles.filter(Boolean);
 
   return (
     <section ref={heroRef} className="relative h-[100svh] w-full overflow-hidden bg-black">
       {/* Monogram, top left */}
-      {site.monogram && (
+      {(editing || site.monogram) && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -40,7 +43,11 @@ export function Hero({
             className="font-bold tracking-[-0.04em] text-white/80 select-none"
             style={{ fontFamily: "'Syne', sans-serif", fontSize: "22px" }}
           >
-            {site.monogram}
+            <Editable
+              value={site.monogram}
+              target={{ kind: "setting", group: "site", path: "monogram" }}
+              placeholder="VD"
+            />
           </span>
         </motion.div>
       )}
@@ -123,7 +130,11 @@ export function Hero({
             textShadow: "0 0 100px rgba(255,255,255,0.12)",
           }}
         >
-          {site.ownerName}
+          <Editable
+            value={site.ownerName}
+            target={{ kind: "setting", group: "site", path: "ownerName" }}
+            placeholder="Your name"
+          />
         </motion.h1>
 
         {roles.length > 0 && (
@@ -155,7 +166,7 @@ export function Hero({
           </motion.p>
         )}
 
-        {site.location && (
+        {(editing || site.location) && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -166,7 +177,11 @@ export function Hero({
               className="text-[10px] uppercase tracking-[0.2em] text-white/80"
               style={{ fontFamily: "'Inter', sans-serif" }}
             >
-              {site.location}
+              <Editable
+                value={site.location}
+                target={{ kind: "setting", group: "site", path: "location" }}
+                placeholder="City"
+              />
             </span>
           </motion.div>
         )}

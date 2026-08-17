@@ -7,12 +7,14 @@ import { recordActivity } from "@/lib/activity";
 import { requireSession } from "@/lib/auth";
 import { revalidateContent } from "@/lib/cache";
 import { getDb, sections } from "@/lib/db";
+import { SECTION_TYPES, type SectionType } from "@/lib/types";
 import { slugify } from "@/lib/utils";
 
 import { attempt, fail, readNumber, readString, succeed, type ActionState } from "./types";
 
-export const SECTION_TYPES = ["hero", "about", "videos", "contact", "richtext"] as const;
-export type SectionType = (typeof SECTION_TYPES)[number];
+// SECTION_TYPES lives in lib/types.ts: a "use server" module may only export
+// async functions, so re-exporting it from here would break every action in
+// this file's module graph.
 
 const configSchema = z.object({
   orientation: z.enum(["horizontal", "vertical"]).optional(),

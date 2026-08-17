@@ -8,6 +8,14 @@ import { jwtVerify, SignJWT } from "jose";
 export const SESSION_COOKIE = "vd_session";
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
+/**
+ * Non-httpOnly *hint* that someone signed in on this browser. It carries no
+ * privileges and is never trusted for authorisation — its only job is to let the
+ * statically-cached homepage skip the session lookup for ordinary visitors.
+ * The real check is always the httpOnly session cookie, server-side.
+ */
+export const EDITOR_HINT_COOKIE = "vd_editor";
+
 export type SessionPayload = {
   sub: string;
   email: string;

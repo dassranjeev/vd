@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import { getDb, isDatabaseConfigured, users } from "@/lib/db";
 
 import {
+  EDITOR_HINT_COOKIE,
   SESSION_COOKIE,
   sessionCookieOptions,
   signSession,
@@ -15,7 +16,7 @@ import {
   type SessionPayload,
 } from "./session";
 
-export { SESSION_COOKIE, isAuthConfigured } from "./session";
+export { EDITOR_HINT_COOKIE, SESSION_COOKIE, isAuthConfigured } from "./session";
 export type { SessionPayload } from "./session";
 
 const BCRYPT_ROUNDS = 12;
@@ -88,6 +89,8 @@ export async function login(email: string, password: string): Promise<LoginResul
 
   const store = await cookies();
   store.set(SESSION_COOKIE, token, sessionCookieOptions());
+  // Readable by the front-end editor so it knows whether to ask who you are.
+  store.set(EDITOR_HINT_COOKIE, "1", { ...sessionCookieOptions(), httpOnly: false });
 
   await db.update(users).set({ lastLoginAt: raw`now()` }).where(eq(users.id, record.id));
 
@@ -97,4 +100,5 @@ export async function login(email: string, password: string): Promise<LoginResul
 export async function logout() {
   const store = await cookies();
   store.set(SESSION_COOKIE, "", sessionCookieOptions(0));
+  store.set(EDITOR_HINT_COOKIE, "", { ...sessionCookieOptions(0), httpOnly: false });
 }

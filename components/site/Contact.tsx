@@ -2,6 +2,8 @@
 
 import { motion } from "framer-motion";
 
+import { Editable } from "@/components/editor/Editable";
+import { useEditor } from "@/components/editor/EditorProvider";
 import type { SettingsShape } from "@/lib/settings";
 import type { PublicSocialLink } from "@/lib/types";
 
@@ -14,6 +16,9 @@ export function Contact({
   contact: SettingsShape["contact"];
   social: PublicSocialLink[];
 }) {
+  // Keep emptied copy on screen in edit mode so it can be typed back into.
+  const { editing } = useEditor();
+
   return (
     <section className="flex flex-col items-center justify-center border-t border-white/10 px-6 py-40 text-center">
       <motion.div
@@ -24,11 +29,21 @@ export function Contact({
         className="max-w-2xl"
       >
         <h2 className="text-4xl font-bold tracking-tighter text-white md:text-7xl lg:text-8xl">
-          {contact.heading}
+          <Editable
+            value={contact.heading}
+            target={{ kind: "setting", group: "contact", path: "heading" }}
+            placeholder="Heading"
+          />
         </h2>
 
-        {contact.subheading && (
-          <p className="mt-6 text-base tracking-wide text-white/40 md:text-lg">{contact.subheading}</p>
+        {(editing || contact.subheading) && (
+          <p className="mt-6 text-base tracking-wide text-white/40 md:text-lg">
+            <Editable
+              value={contact.subheading}
+              target={{ kind: "setting", group: "contact", path: "subheading" }}
+              placeholder="Subheading"
+            />
+          </p>
         )}
 
         {contact.showEmailButton && contact.email && (

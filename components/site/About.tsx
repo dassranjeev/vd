@@ -2,9 +2,15 @@
 
 import { motion } from "framer-motion";
 
+import { Editable } from "@/components/editor/Editable";
+import { useEditor } from "@/components/editor/EditorProvider";
 import type { SettingsShape } from "@/lib/settings";
 
 export function About({ about }: { about: SettingsShape["about"] }) {
+  // In edit mode, keep emptied fields on screen so they can be clicked and
+  // typed back into. Visitors still only see copy that has content.
+  const { editing } = useEditor();
+
   return (
     <section className="mx-auto max-w-5xl px-6 py-10 text-center md:py-16">
       <motion.div
@@ -14,7 +20,7 @@ export function About({ about }: { about: SettingsShape["about"] }) {
         transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
       >
         {/* Multi-line emphasis block */}
-        {about.lines.length > 0 && (
+        {(editing || about.lines.length > 0) && (
           <div className="mb-6 space-y-0.5">
             {about.lines.map((line, index) => (
               <motion.p
@@ -26,7 +32,11 @@ export function About({ about }: { about: SettingsShape["about"] }) {
                 className="text-2xl leading-tight text-white/60 sm:text-3xl md:text-4xl lg:text-[2.6rem]"
                 style={{ fontFamily: "'Syne', sans-serif", fontWeight: 300 }}
               >
-                {line.plain}
+                <Editable
+                  value={line.plain}
+                  target={{ kind: "setting", group: "about", path: `lines.${index}.plain` }}
+                  placeholder="Lead-in "
+                />
                 <em
                   style={{
                     fontFamily: 'Georgia, "Times New Roman", serif',
@@ -35,7 +45,11 @@ export function About({ about }: { about: SettingsShape["about"] }) {
                     color: "rgba(255,255,255,0.92)",
                   }}
                 >
-                  {line.emphasis}
+                  <Editable
+                    value={line.emphasis}
+                    target={{ kind: "setting", group: "about", path: `lines.${index}.emphasis` }}
+                    placeholder="emphasis"
+                  />
                 </em>
                 {line.suffix}
               </motion.p>
@@ -44,7 +58,7 @@ export function About({ about }: { about: SettingsShape["about"] }) {
         )}
 
         {/* Bold closing statement */}
-        {about.closing && (
+        {(editing || about.closing) && (
           <motion.p
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -53,7 +67,11 @@ export function About({ about }: { about: SettingsShape["about"] }) {
             className="mb-6 text-2xl font-bold leading-tight text-white sm:text-3xl md:text-4xl lg:text-[2.6rem]"
             style={{ fontFamily: "'Syne', sans-serif" }}
           >
-            {about.closing}
+            <Editable
+              value={about.closing}
+              target={{ kind: "setting", group: "about", path: "closing" }}
+              placeholder="Closing statement"
+            />
           </motion.p>
         )}
 
@@ -69,7 +87,7 @@ export function About({ about }: { about: SettingsShape["about"] }) {
           />
         )}
 
-        {about.locationLine && (
+        {(editing || about.locationLine) && (
           <motion.p
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
@@ -78,7 +96,11 @@ export function About({ about }: { about: SettingsShape["about"] }) {
             className="text-sm tracking-widest text-white/40"
             style={{ fontFamily: "'Inter', sans-serif" }}
           >
-            {about.locationLine}
+            <Editable
+              value={about.locationLine}
+              target={{ kind: "setting", group: "about", path: "locationLine" }}
+              placeholder="Location line"
+            />
           </motion.p>
         )}
       </motion.div>
