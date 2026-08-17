@@ -30,7 +30,13 @@ export function Hero({
   const roles = site.roles.filter(Boolean);
 
   return (
-    <section ref={heroRef} className="relative h-[100svh] w-full overflow-hidden bg-black">
+    <section
+      ref={heroRef}
+      className="relative w-full overflow-hidden bg-black"
+      // Full viewport height, less whatever the admin bar reserves (0px for
+      // visitors), so the reel still fills the screen exactly.
+      style={{ height: "calc(100svh - var(--vd-adminbar, 0px))" }}
+    >
       {/* Monogram, top left */}
       {(editing || site.monogram) && (
         <motion.div

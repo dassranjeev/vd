@@ -1,6 +1,6 @@
+import { AdminBar } from "@/components/editor/AdminBar";
 import { EditorProvider } from "@/components/editor/EditorProvider";
-import { EditorToolbar } from "@/components/editor/EditorToolbar";
-import { SectionFrame } from "@/components/editor/SectionFrame";
+import { SectionCanvas } from "@/components/editor/SectionCanvas";
 import { About } from "@/components/site/About";
 import { Analytics } from "@/components/site/Analytics";
 import { Contact } from "@/components/site/Contact";
@@ -72,26 +72,18 @@ export default async function HomePage() {
   }
 
   /**
-   * Each band is wrapped so the front-end editor can offer reorder/hide controls
-   * on hover. The wrapper is layout-neutral and inert for visitors.
+   * The bands are handed to SectionCanvas as data + pre-rendered nodes, so the
+   * editor can reorder them client-side while they stay server-rendered.
    */
-  function renderSection(section: PublicSection, index: number) {
-    const body = renderSectionBody(section);
-    if (!body) return null;
-
-    return (
-      <SectionFrame
-        key={section.key}
-        id={section.id}
-        type={section.type}
-        label={section.title}
-        isFirst={index === 0}
-        isLast={index === sections.length - 1}
-      >
-        {body}
-      </SectionFrame>
-    );
-  }
+  const items = sections
+    .map((section) => ({
+      id: section.id,
+      key: section.key,
+      type: section.type,
+      label: section.title,
+      node: renderSectionBody(section),
+    }))
+    .filter((item) => item.node !== null);
 
   const jsonLd = settings.seo.structuredData
     ? {
@@ -113,13 +105,17 @@ export default async function HomePage() {
     : null;
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div
+      className="min-h-screen bg-background text-foreground"
+      // Leaves room for the admin bar; 0px for visitors.
+      style={{ paddingTop: "var(--vd-adminbar, 0px)" }}
+    >
       <EditorProvider>
+        <AdminBar />
         <VideoModalProvider>
-          {sections.map(renderSection)}
+          <SectionCanvas items={items} />
           <Footer credit={settings.site.footerCredit} social={social} />
         </VideoModalProvider>
-        <EditorToolbar />
       </EditorProvider>
 
       {jsonLd && (

@@ -68,6 +68,10 @@
   --app-font-mono: ui-monospace, Menlo, monospace;
   --radius: 0.5rem;
 
+  /* Height reserved for the admin bar. Stays 0px for visitors; the bar sets it
+     to its own height while mounted, so the layout shifts only for admins. */
+  --vd-adminbar: 0px;
+
   color-scheme: dark;
 }
 
@@ -196,6 +200,33 @@
 .vd-section-frame:focus-within .vd-section-controls {
   opacity: 1;
   pointer-events: auto;
+}
+
+/* A draggable band keeps its controls visible so the grip is always reachable. */
+.vd-section-draggable .vd-section-controls {
+  opacity: 0.55;
+  pointer-events: auto;
+}
+
+.vd-section-draggable:hover .vd-section-controls {
+  opacity: 1;
+}
+
+/* The band being dragged: dimmed in place, showing where it will land. */
+.vd-section-dragging {
+  opacity: 0.35;
+  box-shadow:
+    inset 0 0 0 2px rgba(200, 169, 126, 0.9),
+    inset 0 0 60px rgba(200, 169, 126, 0.12);
+}
+
+.vd-section-dragging .vd-section-controls {
+  opacity: 0;
+}
+
+/* Suppress text selection while dragging so the grab doesn't highlight copy. */
+body:has(.vd-section-dragging) {
+  user-select: none;
 }
 
 /* ── Admin-only utilities ─────────────────────────────────── */

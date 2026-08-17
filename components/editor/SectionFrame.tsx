@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { moveSectionAction, toggleSectionAction } from "@/lib/actions/sections";
+import { cn } from "@/lib/utils";
 
 import { useEditor } from "./EditorProvider";
 
@@ -30,6 +31,8 @@ export function SectionFrame({
   label,
   isFirst,
   isLast,
+  handle,
+  dragging = false,
   children,
 }: {
   id: string;
@@ -37,6 +40,9 @@ export function SectionFrame({
   label: string;
   isFirst: boolean;
   isLast: boolean;
+  /** Drag grip supplied by the sortable layer, if drag-and-drop is active. */
+  handle?: React.ReactNode;
+  dragging?: boolean;
   children: React.ReactNode;
 }) {
   const { editing, refresh } = useEditor();
@@ -71,9 +77,18 @@ export function SectionFrame({
     "grid h-8 w-8 place-items-center rounded-md text-white/70 transition-colors hover:bg-white/15 hover:text-white disabled:cursor-not-allowed disabled:opacity-35";
 
   return (
-    <div className="vd-section-frame relative">
+    <div
+      className={cn(
+        "vd-section-frame relative",
+        dragging && "vd-section-dragging",
+        // While any drag is in flight the controls must stay put, not follow hover.
+        handle && "vd-section-draggable",
+      )}
+    >
       {/* Control cluster, revealed on hover over the section */}
       <div className="vd-section-controls pointer-events-none absolute top-4 right-4 z-30 flex items-center gap-1 rounded-lg border border-white/15 bg-black/85 p-1 opacity-0 shadow-xl backdrop-blur-md transition-opacity">
+        {handle}
+
         <span className="px-2 text-[10px] font-medium uppercase tracking-[0.14em] text-white/45">
           {label || TYPE_LABELS[type] || type}
         </span>

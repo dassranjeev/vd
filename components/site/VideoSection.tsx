@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { Editable } from "@/components/editor/Editable";
 import { useEditor } from "@/components/editor/EditorProvider";
+import { SortableVideos } from "@/components/editor/SortableVideosLoader";
 import { sectionConfig, thumbnailFor, type PublicSection, type PublicVideo } from "@/lib/types";
 
 import { useVideoModal } from "./VideoModalProvider";
@@ -155,6 +156,10 @@ export function VideoSection({
     [total],
   );
 
+  // Cards can only be reordered when they have real database ids to persist
+  // against (seed fallback rows use synthetic ones).
+  const sortable = editing && videos.length > 1 && videos.every((video) => isRealId(video.id));
+
   if (total === 0) return null;
 
   return (
@@ -197,7 +202,19 @@ export function VideoSection({
         </div>
       )}
 
-      {isMarquee ? (
+      {/* In edit mode the whole band becomes a static, drag-sortable grid: an
+          animating, duplicated marquee track can't be reordered coherently. */}
+      {sortable ? (
+        <SortableVideos
+          videos={videos}
+          orientation={vertical ? "vertical" : "horizontal"}
+          vertical={vertical}
+          columns={columns}
+          renderCard={(video) => (
+            <VideoCard video={video} vertical={vertical} onOpen={() => openVideo(video.youtubeId)} />
+          )}
+        />
+      ) : isMarquee ? (
         <>
           <div
             className="marquee-container scrollbar-hide overflow-hidden py-5"
