@@ -106,11 +106,32 @@ Eight tables: `users`, `settings` (key → JSONB singletons), `sections`,
 
 ## Deploying to Vercel
 
+**Production footprint: two managed resources, both provisioned from the Vercel
+dashboard.** Postgres (Neon, via the Marketplace) and Vercel Blob for uploads.
+That's the whole list — sessions are signed JWT cookies rather than server-side
+state, so there's no Redis/KV to run, and contact submissions are stored in
+Postgres rather than emailed, so there's no mail provider either.
+
 ### 1. Create a Postgres database
 
-Any Postgres works — Neon, Vercel Postgres, Supabase, Railway. From the Vercel
-dashboard: **Storage → Create → Neon (Postgres)**, which sets `DATABASE_URL`
-automatically. Use the **pooled** connection string if your provider offers one.
+Everything this app needs can be provisioned and billed through Vercel. There is
+no first-party Vercel database any more — Vercel Postgres was retired in June
+2025 — so Postgres comes from the **Vercel Marketplace**, where Neon is the
+direct successor. It appears in your Vercel dashboard and on your Vercel invoice,
+but is operated by Neon.
+
+From the dashboard: **Storage → Create Database → Neon**. Or from the CLI:
+
+```bash
+vercel install neon     # provisions it, links the project, writes .env.local
+```
+
+Either way Vercel injects `DATABASE_URL` automatically, already pointing at
+Neon's **pooled** (PgBouncer) endpoint — which is what this app's client is
+tuned for (`max: 1`, `prepare: false` in `lib/db/index.ts`). Nothing to configure.
+
+Any other Postgres works too — Supabase, Prisma Postgres, Railway, or your own.
+Only `DATABASE_URL` changes.
 
 ### 2. Set environment variables
 
@@ -214,6 +235,12 @@ GET /api/videos?featured=1                featured only
 - **`hero.mp4` is 14 MB** and committed to `/public`. It works, but moving it to
   Blob storage and pointing **Hero → Background video** at the Blob URL will cut
   deployment size and serve it from the CDN.
+- **Idle databases and cold starts.** Neon's smaller tiers scale compute to zero
+  when idle, so the first query after a quiet spell is slow. Visitors mostly
+  don't feel it: the homepage is ISR-cached, so public traffic is served from
+  Vercel's CDN and only cache revalidation and the admin panel actually touch
+  Postgres. A cold database shows up as a slightly slow admin sign-in, not a slow
+  site.
 - **Maintenance mode** (Content & SEO → Site) replaces the public site with a
   holding page while leaving the admin reachable.
 - Contact-form submissions are stored in the database, not emailed. Enable the
