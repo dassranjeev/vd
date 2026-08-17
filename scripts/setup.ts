@@ -7,7 +7,8 @@
  * Safe to re-run: the DDL is `if not exists`, content is only seeded into empty
  * tables, and the admin is only created when no user exists yet.
  */
-import "dotenv/config";
+// Must come first: lib/db reads DATABASE_URL when it is imported.
+import "./load-env";
 
 import { isDatabaseConfigured, sql } from "../lib/db";
 import { runSetup, contentCounts } from "../lib/db/setup";
