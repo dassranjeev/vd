@@ -28,10 +28,16 @@ export function VideoMarquee({
   renderCard: (video: PublicVideo) => React.ReactNode;
 }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const pausedRef = useRef(false);
+  /* Hover and touch pause the auto-scroll for different reasons and must be
+     tracked separately: pointerleave fires the instant a finger lifts, while
+     inertial scrolling is still running. */
+  const hoverPausedRef = useRef(false);
+  const touchPausedRef = useRef(false);
+  const resumeTimerRef = useRef<number | null>(null);
   const draggingRef = useRef(false);
   const dragMovedRef = useRef(0);
   const dragStartRef = useRef({ x: 0, scroll: 0 });
+  const touchStartXRef = useRef(0);
 
   const [activeIndex, setActiveIndex] = useState(0);
   const total = videos.length;
@@ -62,7 +68,9 @@ export function VideoMarquee({
 
       const half = el.scrollWidth / 2;
       if (half > 0) {
-        if (!reduced && !pausedRef.current && !draggingRef.current) {
+        const paused =
+          hoverPausedRef.current || touchPausedRef.current || draggingRef.current;
+        if (!reduced && !paused) {
           el.scrollLeft += (half / Math.max(1, durationSeconds)) * delta;
         }
         // Normalise so the duplicated track loops in both directions.
@@ -74,7 +82,10 @@ export function VideoMarquee({
     };
 
     frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(frame);
+      if (resumeTimerRef.current !== null) window.clearTimeout(resumeTimerRef.current);
+    };
   }, [durationSeconds]);
 
   // Keep the dot indicator in step with wherever the strip actually is.
@@ -144,7 +155,41 @@ export function VideoMarquee({
     scrollerRef.current?.releasePointerCapture(event.pointerId);
   }
 
-  // A drag of more than a few pixels should not also open the lightbox.
+  /* ── Finger scrolling ──────────────────────────────────────────────────
+     The browser does the actual scrolling (see the note on touch-action in
+     globals.css). All we do is stay out of its way: writing scrollLeft from
+     the rAF loop during a flick would cancel the inertia, so auto-scroll is
+     held off until the momentum has settled.                              */
+
+  function pauseForTouch() {
+    touchPausedRef.current = true;
+    if (resumeTimerRef.current !== null) {
+      window.clearTimeout(resumeTimerRef.current);
+      resumeTimerRef.current = null;
+    }
+  }
+
+  function onTouchStart(event: React.TouchEvent<HTMLDivElement>) {
+    pauseForTouch();
+    touchStartXRef.current = event.touches[0]?.clientX ?? 0;
+    dragMovedRef.current = 0;
+  }
+
+  function onTouchMove(event: React.TouchEvent<HTMLDivElement>) {
+    const x = event.touches[0]?.clientX ?? 0;
+    dragMovedRef.current = Math.max(dragMovedRef.current, Math.abs(x - touchStartXRef.current));
+  }
+
+  function onTouchEnd() {
+    if (resumeTimerRef.current !== null) window.clearTimeout(resumeTimerRef.current);
+    // Long enough for a flick's inertia to finish before we resume.
+    resumeTimerRef.current = window.setTimeout(() => {
+      touchPausedRef.current = false;
+      resumeTimerRef.current = null;
+    }, 2500);
+  }
+
+  // A drag or swipe of more than a few pixels should not also open the lightbox.
   function onClickCapture(event: React.MouseEvent<HTMLDivElement>) {
     if (dragMovedRef.current > 6) {
       event.preventDefault();
@@ -160,22 +205,28 @@ export function VideoMarquee({
       <div
         ref={scrollerRef}
         className="vd-reel scrollbar-hide overflow-x-auto overflow-y-hidden py-5"
-        onPointerEnter={() => {
-          pausedRef.current = true;
+        // Hover pause is mouse-only: pointerenter/leave also fire for touch,
+        // and pointerleave lands while a flick is still coasting.
+        onPointerEnter={(event) => {
+          if (event.pointerType === "mouse") hoverPausedRef.current = true;
         }}
-        onPointerLeave={() => {
-          pausedRef.current = false;
+        onPointerLeave={(event) => {
+          if (event.pointerType === "mouse") hoverPausedRef.current = false;
         }}
         onFocusCapture={() => {
-          pausedRef.current = true;
+          hoverPausedRef.current = true;
         }}
         onBlurCapture={() => {
-          pausedRef.current = false;
+          hoverPausedRef.current = false;
         }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onTouchCancel={onTouchEnd}
         onClickCapture={onClickCapture}
         role="group"
         aria-label="Vertical video reel. Scroll sideways or drag to browse."

@@ -114,10 +114,14 @@
    swipes, the arrows and the dots all drive the same thing.    */
 .vd-reel {
   cursor: grab;
-  /* Keep a sideways flick from also scrolling the page behind it. */
+  /* Stops a sideways flick from chaining to the page, or triggering the
+     browser back-swipe gesture on iOS. */
   overscroll-behavior-x: contain;
-  /* Vertical page scrolling stays with the browser; horizontal is ours. */
-  touch-action: pan-y;
+  /* Do NOT set touch-action here. `pan-y` would permit only vertical
+     panning, which silently disables finger-scrolling this reel sideways --
+     the exact bug this replaced. The default (auto) lets the browser route a
+     horizontal swipe to this scroller, a vertical one to the page, and still
+     allows pinch-zoom. */
 }
 
 .vd-reel:active {
