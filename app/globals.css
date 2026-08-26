@@ -108,36 +108,26 @@
   }
 }
 
-/* ── Infinite vertical-reel marquee ───────────────────────────
-   The track holds the video list twice, so translating it by
-   exactly -50% loops seamlessly. Duration is set per-section
-   from the CMS via the --marquee-duration custom property.     */
-@keyframes marquee-scroll {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
+/* ── Vertical-video reel ──────────────────────────────────────
+   A real horizontal scroll container: the auto-scroll advances
+   scrollLeft from JS (see VideoMarquee), so dragging, trackpad
+   swipes, the arrows and the dots all drive the same thing.    */
+.vd-reel {
+  cursor: grab;
+  /* Keep a sideways flick from also scrolling the page behind it. */
+  overscroll-behavior-x: contain;
+  /* Vertical page scrolling stays with the browser; horizontal is ours. */
+  touch-action: pan-y;
 }
 
-.marquee-track {
-  animation: marquee-scroll var(--marquee-duration, 40s) linear infinite;
-  width: max-content;
+.vd-reel:active {
+  cursor: grabbing;
 }
 
-.marquee-container:hover .marquee-track,
-.marquee-container:focus-within .marquee-track {
-  animation-play-state: paused;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .marquee-track {
-    animation: none;
-  }
-  .marquee-container {
-    overflow-x: auto;
-  }
+/* Dragging shouldn't leave a trail of selected card titles. */
+.vd-reel:active,
+.vd-reel:active * {
+  user-select: none;
 }
 
 .scrollbar-hide {
@@ -146,6 +136,20 @@
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Auto-scroll is disabled in JS for these users, so give the reel a visible
+     scrollbar to browse with. Compound selector and position both matter: it
+     has to outrank .scrollbar-hide above. */
+  .vd-reel.scrollbar-hide {
+    scrollbar-width: thin;
+  }
+
+  .vd-reel.scrollbar-hide::-webkit-scrollbar {
+    display: block;
+    height: 6px;
+  }
 }
 
 /* ── Front-end editor ─────────────────────────────────────────

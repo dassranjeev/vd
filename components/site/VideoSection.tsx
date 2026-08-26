@@ -3,13 +3,13 @@
 import { motion } from "framer-motion";
 import { Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
 
 import { Editable } from "@/components/editor/Editable";
 import { useEditor } from "@/components/editor/EditorProvider";
 import { SortableVideos } from "@/components/editor/SortableVideosLoader";
 import { sectionConfig, thumbnailFor, type PublicSection, type PublicVideo } from "@/lib/types";
 
+import { VideoMarquee } from "./VideoMarquee";
 import { useVideoModal } from "./VideoModalProvider";
 
 const COLUMN_CLASSES: Record<number, string> = {
@@ -139,22 +139,7 @@ export function VideoSection({
   const columns = COLUMN_CLASSES[config.columns ?? 3] ?? COLUMN_CLASSES[3];
   const duration = Math.max(5, config.autoScrollSeconds ?? 40);
 
-  // Dot indicator for the marquee. One dot becomes active per equal slice of
-  // the loop, matching the CSS animation's pace.
-  const [activeDot, setActiveDot] = useState(0);
   const total = videos.length;
-
-  useEffect(() => {
-    if (!isMarquee || total === 0) return;
-    const stepMs = (duration * 1000) / total;
-    const timer = setInterval(() => setActiveDot((prev) => (prev + 1) % total), stepMs);
-    return () => clearInterval(timer);
-  }, [isMarquee, total, duration]);
-
-  const nudge = useCallback(
-    (delta: number) => setActiveDot((prev) => (prev + delta + total) % total),
-    [total],
-  );
 
   // Cards can only be reordered when they have real database ids to persist
   // against (seed fallback rows use synthetic ones).
@@ -215,79 +200,13 @@ export function VideoSection({
           )}
         />
       ) : isMarquee ? (
-        <>
-          <div
-            className="marquee-container scrollbar-hide overflow-hidden py-5"
-            style={{ touchAction: "pan-y" }}
-          >
-            {/* The list is rendered twice so the -50% loop is seamless. */}
-            <div
-              className="marquee-track flex gap-5"
-              style={{ ["--marquee-duration" as string]: `${duration}s` }}
-            >
-              {[...videos, ...videos].map((video, index) => (
-                <VideoCard
-                  key={`${video.id}-${index}`}
-                  video={video}
-                  vertical
-                  onOpen={() => openVideo(video.youtubeId)}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-10 flex items-center justify-center gap-8">
-            <button
-              type="button"
-              onClick={() => nudge(-1)}
-              aria-label="Previous"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 text-white/50 transition-all duration-300 hover:border-white/50 hover:text-white"
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                <path
-                  d="M9 2L4 7L9 12"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-
-            <div className="flex gap-2">
-              {videos.map((video, index) => (
-                <button
-                  key={video.id}
-                  type="button"
-                  onClick={() => setActiveDot(index)}
-                  aria-label={`Go to ${video.title}`}
-                  className={`rounded-full transition-all duration-300 ${
-                    index === activeDot
-                      ? "h-1.5 w-4 bg-white"
-                      : "h-1.5 w-1.5 bg-white/25 hover:bg-white/50"
-                  }`}
-                />
-              ))}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => nudge(1)}
-              aria-label="Next"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 text-white/50 transition-all duration-300 hover:border-white/50 hover:text-white"
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                <path
-                  d="M5 2L10 7L5 12"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
-          </div>
-        </>
+        <VideoMarquee
+          videos={videos}
+          durationSeconds={duration}
+          renderCard={(video) => (
+            <VideoCard video={video} vertical onOpen={() => openVideo(video.youtubeId)} />
+          )}
+        />
       ) : (
         <div className="px-8 md:px-20 lg:px-32">
           <div className={`mx-auto grid max-w-[1100px] gap-4 ${columns}`}>
