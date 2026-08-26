@@ -18,6 +18,8 @@ import type { PublicVideo } from "@/lib/types";
  * halfway mark, so it wraps seamlessly in either direction however you got
  * there.
  */
+/** How long an arrow or dot press takes to settle. */
+const GLIDE_MS = 520;
 export function VideoMarquee({
   videos,
   durationSeconds,
@@ -41,6 +43,11 @@ export function VideoMarquee({
   const dragMovedRef = useRef(0);
   const dragStartRef = useRef({ x: 0, scroll: 0 });
   const touchStartXRef = useRef(0);
+  /* An arrow or dot press animates through the same rAF loop as the drift.
+     Native smooth scrolling cannot be used here: the loop assigns scrollLeft
+     every frame, and any direct assignment cancels an in-flight smooth
+     scroll, so the buttons moved the strip by one frame and stopped. */
+  const glideRef = useRef<{ from: number; to: number; start: number } | null>(null);
 
   const [activeIndex, setActiveIndex] = useState(0);
   const total = videos.length;
@@ -71,14 +78,32 @@ export function VideoMarquee({
 
       const half = el.scrollWidth / 2;
       if (half > 0) {
-        const paused =
-          hoverPausedRef.current || touchPausedRef.current || draggingRef.current;
-        if (!reduced && !paused) {
-          el.scrollLeft += (half / Math.max(1, durationSeconds)) * delta;
+        const glide = glideRef.current;
+
+        if (glide) {
+          const progress = Math.min(1, (now - glide.start) / GLIDE_MS);
+          // easeOutCubic: quick off the mark, settles gently.
+          const eased = 1 - Math.pow(1 - progress, 3);
+          el.scrollLeft = glide.from + (glide.to - glide.from) * eased;
+
+          if (progress >= 1) {
+            glideRef.current = null;
+            scheduleResume(1200);
+          }
+        } else {
+          const paused =
+            hoverPausedRef.current || touchPausedRef.current || draggingRef.current;
+          if (!reduced && !paused) {
+            el.scrollLeft += (half / Math.max(1, durationSeconds)) * delta;
+          }
         }
-        // Normalise so the duplicated track loops in both directions.
-        if (el.scrollLeft >= half) el.scrollLeft -= half;
-        else if (el.scrollLeft < 0) el.scrollLeft += half;
+
+        // Normalise so the duplicated track loops in both directions. Skipped
+        // mid-glide, which would otherwise jump the animation's end point.
+        if (!glideRef.current) {
+          if (el.scrollLeft >= half) el.scrollLeft -= half;
+          else if (el.scrollLeft < 0) el.scrollLeft += half;
+        }
       }
 
       frame = requestAnimationFrame(tick);
@@ -130,6 +155,7 @@ export function VideoMarquee({
       const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? el.clientHeight : 1;
       const delta = event.deltaY * scale;
 
+      glideRef.current = null;
       budget += Math.abs(delta);
       event.preventDefault();
       el.scrollLeft += delta;
@@ -158,11 +184,43 @@ export function VideoMarquee({
     return () => el.removeEventListener("scroll", onScroll);
   }, [total, stepWidth]);
 
+  /**
+   * Starts a glide of `delta` pixels, handled by the loop above.
+   *
+   * The path is kept inside [0, 2 x half] so the browser never clamps it
+   * mid-animation; the loop normalises back into range once it finishes.
+   */
+  const glideBy = useCallback((delta: number) => {
+    const el = scrollerRef.current;
+    if (!el || delta === 0) return;
+
+    const half = el.scrollWidth / 2 || 1;
+    let from = el.scrollLeft;
+    let to = from + delta;
+
+    if (to < 0) {
+      from += half;
+      to += half;
+      el.scrollLeft = from;
+    } else if (to > half * 2) {
+      from -= half;
+      to -= half;
+      el.scrollLeft = from;
+    }
+
+    // Hold the drift off so it does not fight the glide, or resume on top of it.
+    touchPausedRef.current = true;
+    if (resumeTimerRef.current !== null) {
+      window.clearTimeout(resumeTimerRef.current);
+      resumeTimerRef.current = null;
+    }
+
+    glideRef.current = { from, to, start: performance.now() };
+  }, []);
+
   const scrollByCards = useCallback(
-    (cards: number) => {
-      scrollerRef.current?.scrollBy({ left: cards * stepWidth(), behavior: "smooth" });
-    },
-    [stepWidth],
+    (cards: number) => glideBy(cards * stepWidth()),
+    [glideBy, stepWidth],
   );
 
   const scrollToIndex = useCallback(
@@ -173,12 +231,10 @@ export function VideoMarquee({
       const direct = index * stepWidth() - el.scrollLeft;
       // Travel to whichever copy of the target card is nearer.
       const wrapped = direct - Math.sign(direct) * half;
-      const move = Math.abs(wrapped) < Math.abs(direct) ? wrapped : direct;
-      el.scrollBy({ left: move, behavior: "smooth" });
+      glideBy(Math.abs(wrapped) < Math.abs(direct) ? wrapped : direct);
     },
-    [stepWidth],
+    [glideBy, stepWidth],
   );
-
   /* ── Click-and-drag with a mouse ────────────────────────────────────────
      Touch and trackpads already scroll this natively, so pointer dragging is
      wired up for mice only: hijacking touch would fight the browser.        */
@@ -189,6 +245,7 @@ export function VideoMarquee({
     if (!el) return;
 
     draggingRef.current = true;
+    glideRef.current = null;
     dragMovedRef.current = 0;
     dragStartRef.current = { x: event.clientX, scroll: el.scrollLeft };
     el.setPointerCapture(event.pointerId);
@@ -235,6 +292,7 @@ export function VideoMarquee({
 
   function onTouchStart(event: React.TouchEvent<HTMLDivElement>) {
     pauseForTouch();
+    glideRef.current = null;
     touchStartXRef.current = event.touches[0]?.clientX ?? 0;
     dragMovedRef.current = 0;
   }
