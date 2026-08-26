@@ -81,3 +81,18 @@ export function slugify(input: string) {
     .replace(/^-+|-+$/g, "")
     .slice(0, 60);
 }
+
+/**
+ * Post date for cards and article headers.
+ *
+ * Lives here rather than beside PostsSection because that module is a client
+ * component: a server component cannot call a function exported across the
+ * client boundary, only render it as a component. Fixed locale so the server
+ * and client produce the same string.
+ */
+export function formatPostDate(iso: string | null) {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" });
+}

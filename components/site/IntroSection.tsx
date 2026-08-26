@@ -4,17 +4,30 @@ import { motion } from "framer-motion";
 
 import { Editable } from "@/components/editor/Editable";
 import { useEditor } from "@/components/editor/EditorProvider";
+import type { SettingsShape } from "@/lib/settings";
 import { sectionConfig, type PublicSection } from "@/lib/types";
 
+import { AboutStatement } from "./AboutStatement";
+
 /**
- * About Us / Intro: an eyebrow, a headline, a couple of paragraphs, an optional
- * portrait and an optional call to action.
+ * About Us / Intro: an eyebrow, a headline, prose, an optional call to action,
+ * and a second column that can hold either a portrait or the About statement.
  *
- * Everything lives in the section's own config rather than a settings group, so
- * the page can carry more than one of these if the story needs it. Body copy is
- * split on blank lines and rendered as plain paragraphs — never as HTML.
+ * The statement option is why this exists as two columns: the intro copy and
+ * the "What it conveys" block say related things and read better side by side
+ * than stacked as two separate full-width bands.
+ *
+ * Copy lives in the section's own config rather than a settings group, so a
+ * page can carry more than one intro if the story needs it. Body text is split
+ * on blank lines and rendered as plain paragraphs — never as HTML.
  */
-export function IntroSection({ section }: { section: PublicSection }) {
+export function IntroSection({
+  section,
+  about,
+}: {
+  section: PublicSection;
+  about: SettingsShape["about"];
+}) {
   const { editing } = useEditor();
   const config = sectionConfig(section);
 
@@ -23,28 +36,46 @@ export function IntroSection({ section }: { section: PublicSection }) {
     .map((part) => part.trim())
     .filter(Boolean);
 
-  const hasContent = Boolean(config.heading || paragraphs.length > 0 || config.imageUrl);
+  // Legacy rows predate this option: fall back to the image behaviour they had.
+  const second = config.secondColumn ?? (config.imageUrl ? "image" : "none");
+  const showStatement = second === "statement";
+  const showImage = second === "image";
+  const twoColumns = showStatement || showImage || editing;
+
+  const hasContent = Boolean(config.heading || paragraphs.length > 0 || showStatement || config.imageUrl);
   if (!hasContent && !editing) return null;
 
   const imageFirst = config.imageSide === "left";
 
   return (
     <section
-      className="px-6 py-24 md:px-12 md:py-32"
+      className="relative overflow-hidden px-6 py-24 md:px-12 md:py-32"
       style={config.background ? { backgroundColor: config.background } : undefined}
     >
+      {/* Soft warm wash, echoing the hero's light leaks. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 60% 50% at 85% 15%, rgba(200,169,126,0.07) 0%, transparent 70%)",
+        }}
+      />
+
       <motion.div
         initial={{ opacity: 0, y: 32 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: "-80px" }}
         transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-        className={`mx-auto grid max-w-[1100px] items-center gap-12 ${
-          config.imageUrl || editing ? "lg:grid-cols-2 lg:gap-16" : "max-w-3xl"
+        className={`relative mx-auto grid max-w-[1100px] gap-12 ${
+          twoColumns ? "lg:grid-cols-2 lg:items-center lg:gap-16" : "max-w-3xl"
         }`}
       >
-        <div className={imageFirst ? "lg:order-2" : undefined}>
+        {/* ── Left: the intro copy ── */}
+        <div className={imageFirst && showImage ? "lg:order-2" : undefined}>
           {(editing || config.eyebrow) && (
-            <p className="mb-5 text-[10px] uppercase tracking-[0.32em] text-[#c8a97e]">
+            <p className="mb-5 flex items-center gap-3 text-[10px] uppercase tracking-[0.32em] text-[#c8a97e]">
+              <span aria-hidden="true" className="h-px w-6 bg-[#c8a97e]/60" />
               {section.id ? (
                 <Editable
                   value={config.eyebrow ?? ""}
@@ -59,7 +90,7 @@ export function IntroSection({ section }: { section: PublicSection }) {
 
           {(editing || config.heading) && (
             <h2
-              className="text-3xl font-bold leading-[1.1] tracking-tight text-white md:text-4xl lg:text-[2.9rem]"
+              className="text-[1.9rem] font-bold leading-[1.08] tracking-[-0.02em] text-white sm:text-4xl lg:text-[2.75rem]"
               style={{ fontFamily: "'Syne', sans-serif" }}
             >
               {section.id ? (
@@ -73,11 +104,6 @@ export function IntroSection({ section }: { section: PublicSection }) {
               )}
             </h2>
           )}
-
-          <div
-            className="mt-6 h-px w-16"
-            style={{ background: "linear-gradient(to right, #c8a97e, transparent)" }}
-          />
 
           {/* Edited as one block so paragraph breaks stay meaningful. */}
           {section.id && editing ? (
@@ -94,7 +120,7 @@ export function IntroSection({ section }: { section: PublicSection }) {
             paragraphs.map((paragraph, index) => (
               <p
                 key={index}
-                className="mt-6 text-base leading-relaxed text-white/55 md:text-[17px]"
+                className="mt-6 text-[15px] leading-[1.75] text-white/55 md:text-base"
                 style={{ fontFamily: "'Inter', sans-serif" }}
               >
                 {paragraph}
@@ -105,7 +131,7 @@ export function IntroSection({ section }: { section: PublicSection }) {
           {config.ctaLabel && config.ctaHref && (
             <a
               href={config.ctaHref}
-              className="group relative mt-10 inline-block overflow-hidden rounded-full border border-white/20 px-6 py-3.5"
+              className="group relative mt-9 inline-block overflow-hidden rounded-full border border-white/20 px-6 py-3.5"
             >
               <span className="relative z-20 text-xs font-medium uppercase tracking-widest text-white/80 transition-colors duration-500 group-hover:text-black">
                 {config.ctaLabel}
@@ -115,7 +141,14 @@ export function IntroSection({ section }: { section: PublicSection }) {
           )}
         </div>
 
-        {(config.imageUrl || editing) && (
+        {/* ── Right: statement, portrait, or an editor prompt ── */}
+        {showStatement && (
+          <div className="lg:border-l lg:border-white/[0.07] lg:pl-16">
+            <AboutStatement about={about} variant="panel" />
+          </div>
+        )}
+
+        {showImage && (
           <div className={imageFirst ? "lg:order-1" : undefined}>
             {config.imageUrl ? (
               <div className="relative overflow-hidden rounded-sm">
@@ -131,12 +164,20 @@ export function IntroSection({ section }: { section: PublicSection }) {
             ) : (
               <div className="grid aspect-[4/5] w-full place-items-center rounded-sm border border-dashed border-white/15 px-6 text-center">
                 <p className="text-xs leading-relaxed text-white/35">
-                  Add a portrait under
-                  <br />
-                  Sections → {section.title || "this section"} → Image
+                  Add a portrait under Sections → {section.title || "this section"}
                 </p>
               </div>
             )}
+          </div>
+        )}
+
+        {editing && second === "none" && (
+          <div className="grid min-h-[220px] place-items-center rounded-sm border border-dashed border-white/15 px-6 text-center">
+            <p className="text-xs leading-relaxed text-white/35">
+              Second column is off.
+              <br />
+              Choose a portrait or the About statement in Sections.
+            </p>
           </div>
         )}
       </motion.div>

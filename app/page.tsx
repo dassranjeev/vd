@@ -57,7 +57,7 @@ export default async function HomePage() {
           <Hero key={section.key} site={settings.site} hero={settings.hero} social={social} />
         );
       case "intro":
-        return <IntroSection key={section.key} section={section} />;
+        return <IntroSection key={section.key} section={section} about={settings.about} />;
       case "about":
         return <About key={section.key} about={settings.about} />;
       case "gallery":

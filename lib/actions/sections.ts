@@ -37,6 +37,7 @@ const configSchema = z.object({
   heading: z.string().max(200).optional(),
   imageUrl: z.string().max(600).optional(),
   imageSide: z.enum(["left", "right"]).optional(),
+  secondColumn: z.enum(["image", "statement", "none"]).optional(),
   ctaLabel: z.string().max(60).optional(),
   ctaHref: z.string().max(200).optional(),
 
@@ -70,6 +71,7 @@ function readConfig(form: FormData, type: SectionType) {
     candidate.body = readString(form, "config.body");
     candidate.imageUrl = readString(form, "config.imageUrl");
     candidate.imageSide = readString(form, "config.imageSide", "right");
+    candidate.secondColumn = readString(form, "config.secondColumn", "statement");
     candidate.ctaLabel = readString(form, "config.ctaLabel");
     candidate.ctaHref = readString(form, "config.ctaHref");
   }

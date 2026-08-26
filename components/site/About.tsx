@@ -2,15 +2,17 @@
 
 import { motion } from "framer-motion";
 
-import { Editable } from "@/components/editor/Editable";
-import { useEditor } from "@/components/editor/EditorProvider";
 import type { SettingsShape } from "@/lib/settings";
 
-export function About({ about }: { about: SettingsShape["about"] }) {
-  // In edit mode, keep emptied fields on screen so they can be clicked and
-  // typed back into. Visitors still only see copy that has content.
-  const { editing } = useEditor();
+import { AboutStatement } from "./AboutStatement";
 
+/**
+ * The standalone, full-width version of the About statement.
+ *
+ * The copy itself lives in AboutStatement so this band and the intro section's
+ * second column stay in sync — there is one source of truth in settings.about.
+ */
+export function About({ about }: { about: SettingsShape["about"] }) {
   return (
     <section className="mx-auto max-w-5xl px-6 py-10 text-center md:py-16">
       <motion.div
@@ -19,90 +21,7 @@ export function About({ about }: { about: SettingsShape["about"] }) {
         viewport={{ once: true, margin: "-80px" }}
         transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
       >
-        {/* Multi-line emphasis block */}
-        {(editing || about.lines.length > 0) && (
-          <div className="mb-6 space-y-0.5">
-            {about.lines.map((line, index) => (
-              <motion.p
-                key={`${line.plain}-${index}`}
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.7, delay: index * 0.12, ease: [0.16, 1, 0.3, 1] }}
-                className="text-2xl leading-tight text-white/60 sm:text-3xl md:text-4xl lg:text-[2.6rem]"
-                style={{ fontFamily: "'Syne', sans-serif", fontWeight: 300 }}
-              >
-                <Editable
-                  value={line.plain}
-                  target={{ kind: "setting", group: "about", path: `lines.${index}.plain` }}
-                  placeholder="Lead-in "
-                />
-                <em
-                  style={{
-                    fontFamily: 'Georgia, "Times New Roman", serif',
-                    fontStyle: "italic",
-                    fontWeight: 700,
-                    color: "rgba(255,255,255,0.92)",
-                  }}
-                >
-                  <Editable
-                    value={line.emphasis}
-                    target={{ kind: "setting", group: "about", path: `lines.${index}.emphasis` }}
-                    placeholder="emphasis"
-                  />
-                </em>
-                {line.suffix}
-              </motion.p>
-            ))}
-          </div>
-        )}
-
-        {/* Bold closing statement */}
-        {(editing || about.closing) && (
-          <motion.p
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="mb-6 text-2xl font-bold leading-tight text-white sm:text-3xl md:text-4xl lg:text-[2.6rem]"
-            style={{ fontFamily: "'Syne', sans-serif" }}
-          >
-            <Editable
-              value={about.closing}
-              target={{ kind: "setting", group: "about", path: "closing" }}
-              placeholder="Closing statement"
-            />
-          </motion.p>
-        )}
-
-        {/* Gold rule */}
-        {about.showRule && (
-          <motion.div
-            initial={{ scaleX: 0 }}
-            whileInView={{ scaleX: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.9, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="mx-auto mb-8 h-px max-w-xs origin-center"
-            style={{ background: "linear-gradient(to right, transparent, #c8a97e, transparent)" }}
-          />
-        )}
-
-        {(editing || about.locationLine) && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-            className="text-sm tracking-widest text-white/40"
-            style={{ fontFamily: "'Inter', sans-serif" }}
-          >
-            <Editable
-              value={about.locationLine}
-              target={{ kind: "setting", group: "about", path: "locationLine" }}
-              placeholder="Location line"
-            />
-          </motion.p>
-        )}
+        <AboutStatement about={about} variant="band" />
       </motion.div>
     </section>
   );

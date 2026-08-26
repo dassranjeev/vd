@@ -71,6 +71,8 @@ export type SectionConfig = {
   heading?: string;
   imageUrl?: string;
   imageSide?: string;
+  /** image | statement | none */
+  secondColumn?: string;
   ctaLabel?: string;
   ctaHref?: string;
 

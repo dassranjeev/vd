@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { formatPostDate } from "@/components/site/PostsSection";
 import { getPosts, getSettings, siteOrigin } from "@/lib/content";
+import { formatPostDate } from "@/lib/utils";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { site, seo } = await getSettings();

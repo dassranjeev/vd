@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Editable } from "@/components/editor/Editable";
 import { useEditor } from "@/components/editor/EditorProvider";
 import { sectionConfig, type PublicPost, type PublicSection } from "@/lib/types";
+import { formatPostDate } from "@/lib/utils";
 
 const COLUMN_CLASSES: Record<number, string> = {
   1: "grid-cols-1",
@@ -14,13 +15,6 @@ const COLUMN_CLASSES: Record<number, string> = {
   3: "grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
 };
 
-/** Fixed locale so the server and client render the same string. */
-export function formatPostDate(iso: string | null) {
-  if (!iso) return "";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" });
-}
 
 export function PostsSection({
   section,

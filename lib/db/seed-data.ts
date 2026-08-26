@@ -124,6 +124,7 @@ export const seedSections: SeedSection[] = [
 
 From first treatment to final grade, it stays in one pair of hands. That means fewer handoffs, a consistent look, and a film that says what you actually meant.`,
       imageSide: "right",
+      secondColumn: "statement",
       ctaLabel: "See the work",
       ctaHref: "#vertical-work",
     },

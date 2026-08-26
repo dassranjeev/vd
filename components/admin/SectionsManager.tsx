@@ -49,6 +49,7 @@ type Config = {
   heading?: string;
   imageUrl?: string;
   imageSide?: string;
+  secondColumn?: string;
   ctaLabel?: string;
   ctaHref?: string;
   limit?: number;
@@ -242,7 +243,23 @@ function SectionCard({
                 <Field label="Eyebrow" help="Small label above the heading.">
                   <Input name="config.eyebrow" defaultValue={config.eyebrow ?? ""} maxLength={120} />
                 </Field>
-                <Field label="Image side">
+                <Field
+                  label="Second column"
+                  help="Put the About statement beside the copy, a portrait, or nothing."
+                >
+                  <Select
+                    name="config.secondColumn"
+                    defaultValue={config.secondColumn ?? (config.imageUrl ? "image" : "statement")}
+                  >
+                    <option value="statement">About statement</option>
+                    <option value="image">Portrait image</option>
+                    <option value="none">Nothing (single column)</option>
+                  </Select>
+                </Field>
+              </div>
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field label="Image side" help="Portrait only.">
                   <Select name="config.imageSide" defaultValue={config.imageSide ?? "right"}>
                     <option value="right">Image on the right</option>
                     <option value="left">Image on the left</option>

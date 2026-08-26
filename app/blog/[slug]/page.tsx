@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { formatPostDate } from "@/components/site/PostsSection";
 import { getPostBySlug, getSettings, siteOrigin } from "@/lib/content";
+import { formatPostDate } from "@/lib/utils";
 
 type Params = { params: Promise<{ slug: string }> };
 
