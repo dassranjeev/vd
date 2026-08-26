@@ -1,4 +1,4 @@
-import { sql as raw } from "drizzle-orm";
+import { max, sql as raw } from "drizzle-orm";
 
 import { getDb, media, messages, sections, socialLinks, users, videos } from "./index";
 import { seedSections, seedSocialLinks, seedVideos } from "./seed-data";
@@ -119,10 +119,70 @@ export const DDL = [
      created_at timestamptz not null default now()
    )`,
   `create index if not exists activity_log_created_at_idx on activity_log (created_at)`,
+
+  `create table if not exists photos (
+     id uuid primary key default gen_random_uuid(),
+     url text not null,
+     alt text not null default '',
+     caption text not null default '',
+     aspect text not null default 'portrait',
+     category text not null default '',
+     published boolean not null default true,
+     position integer not null default 0,
+     created_at timestamptz not null default now(),
+     updated_at timestamptz not null default now()
+   )`,
+  `create index if not exists photos_position_idx on photos (position)`,
+
+  `create table if not exists logos (
+     id uuid primary key default gen_random_uuid(),
+     name text not null,
+     image_url text not null default '',
+     url text not null default '',
+     enabled boolean not null default true,
+     position integer not null default 0,
+     created_at timestamptz not null default now()
+   )`,
+  `create index if not exists logos_position_idx on logos (position)`,
+
+  `create table if not exists testimonials (
+     id uuid primary key default gen_random_uuid(),
+     quote text not null,
+     author text not null,
+     role text not null default '',
+     company text not null default '',
+     avatar_url text not null default '',
+     rating integer not null default 5,
+     featured boolean not null default false,
+     published boolean not null default true,
+     position integer not null default 0,
+     created_at timestamptz not null default now(),
+     updated_at timestamptz not null default now()
+   )`,
+  `create index if not exists testimonials_position_idx on testimonials (position)`,
+
+  `create table if not exists posts (
+     id uuid primary key default gen_random_uuid(),
+     title text not null,
+     slug text not null,
+     excerpt text not null default '',
+     body text not null default '',
+     cover_url text not null default '',
+     tags text not null default '',
+     read_minutes integer not null default 0,
+     published boolean not null default false,
+     published_at timestamptz,
+     position integer not null default 0,
+     created_at timestamptz not null default now(),
+     updated_at timestamptz not null default now()
+   )`,
+  `create unique index if not exists posts_slug_key on posts (slug)`,
+  `create index if not exists posts_published_idx on posts (published, published_at)`,
 ];
 
 export type SetupReport = {
   tablesEnsured: number;
+  sectionsAdded: number;
   sectionsSeeded: number;
   videosSeeded: number;
   socialSeeded: number;
@@ -245,19 +305,65 @@ export async function ensureBootstrapAdmin() {
   return { created: true, email, note: `Administrator ${email} created.` };
 }
 
+/**
+ * Adds any seed section whose key is not in the database yet.
+ *
+ * seedContent() only fires when the sections table is empty, so an existing
+ * install never picks up newly shipped band types. This fills that gap without
+ * touching sections the editor has already arranged: new bands are appended at
+ * the end, and existing rows keep their position, title and config.
+ */
+export async function ensureSectionsPresent() {
+  const db = getDb();
+
+  const existing = await db.select({ key: sections.key }).from(sections);
+  if (existing.length === 0) return { added: 0, keys: [] as string[] };
+
+  const present = new Set(existing.map((row) => row.key));
+  const missing = seedSections.filter((section) => !present.has(section.key));
+  if (missing.length === 0) return { added: 0, keys: [] as string[] };
+
+  const [row] = await db.select({ value: max(sections.position) }).from(sections);
+  let position = (row?.value ?? -1) + 1;
+
+  await db.insert(sections).values(
+    missing.map((section) => ({
+      key: section.key,
+      type: section.type,
+      title: section.title,
+      subtitle: section.subtitle,
+      config: section.config,
+      position: position++,
+      enabled: true,
+    })),
+  );
+
+  return { added: missing.length, keys: missing.map((section) => section.key) };
+}
+
 export async function runSetup({ seedOnly = false } = {}): Promise<SetupReport> {
   const tablesEnsured = seedOnly ? 0 : await ensureSchema();
   const seeded = await seedContent();
+  // Existing installs need newly shipped bands backfilled; fresh ones are
+  // already covered by seedContent above.
+  const backfilled = await ensureSectionsPresent();
   const admin = await ensureBootstrapAdmin();
 
   return {
     tablesEnsured,
+    sectionsAdded: backfilled.added,
     sectionsSeeded: seeded.sectionsSeeded,
     videosSeeded: seeded.videosSeeded,
     socialSeeded: seeded.socialSeeded,
     adminCreated: admin.created,
     adminEmail: admin.email,
-    notes: [...seeded.notes, admin.note],
+    notes: [
+      ...seeded.notes,
+      backfilled.added > 0
+        ? `Added new sections: ${backfilled.keys.join(", ")}.`
+        : "No new section types to add.",
+      admin.note,
+    ],
   };
 }
 

@@ -18,6 +18,10 @@ export async function GET() {
       sections: content.sections,
       videos: content.videos,
       social: content.social,
+      photos: content.photos,
+      logos: content.logos,
+      testimonials: content.testimonials,
+      posts: content.posts,
     },
     {
       headers: {

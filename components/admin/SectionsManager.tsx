@@ -14,10 +14,16 @@ import { idleState } from "@/lib/actions/types";
 import type { Section } from "@/lib/db";
 
 import { ConfirmSubmit, FormFeedback, SubmitButton } from "./form";
+import { MediaInput } from "./MediaInput";
 import { Badge, Card, CardHeader, Field, Input, Select, Textarea } from "./ui";
 
 const TYPE_LABELS: Record<string, string> = {
   hero: "Hero reel",
+  intro: "About / intro",
+  gallery: "Photo gallery",
+  logos: "Client logos",
+  testimonials: "Testimonials",
+  posts: "Blog posts",
   about: "About statement",
   videos: "Video band",
   contact: "Contact",
@@ -25,6 +31,11 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const TYPE_HINTS: Record<string, string> = {
+  intro: "Heading and copy are edited here, or inline on the page.",
+  gallery: "Shows published photos from Admin, Photos.",
+  logos: "Shows enabled logos from Admin, Clients.",
+  testimonials: "Shows published quotes from Admin, Testimonials.",
+  posts: "Shows published posts from Admin, Journal.",
   hero: "Content lives in Content & SEO → Hero and Site.",
   about: "Content lives in Content & SEO → About.",
   videos: "Pulls published videos matching the orientation below.",
@@ -34,6 +45,16 @@ const TYPE_HINTS: Record<string, string> = {
 
 type Config = {
   orientation?: string;
+  eyebrow?: string;
+  heading?: string;
+  imageUrl?: string;
+  imageSide?: string;
+  ctaLabel?: string;
+  ctaHref?: string;
+  limit?: number;
+  grayscale?: boolean;
+  showCaptions?: boolean;
+  ctaAllLabel?: string;
   layout?: string;
   background?: string;
   columns?: number;
@@ -215,6 +236,115 @@ function SectionCard({
             </Field>
           )}
 
+          {section.type === "intro" && (
+            <>
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field label="Eyebrow" help="Small label above the heading.">
+                  <Input name="config.eyebrow" defaultValue={config.eyebrow ?? ""} maxLength={120} />
+                </Field>
+                <Field label="Image side">
+                  <Select name="config.imageSide" defaultValue={config.imageSide ?? "right"}>
+                    <option value="right">Image on the right</option>
+                    <option value="left">Image on the left</option>
+                  </Select>
+                </Field>
+              </div>
+
+              <Field label="Heading">
+                <Input name="config.heading" defaultValue={config.heading ?? ""} maxLength={200} />
+              </Field>
+
+              <Field label="Body copy" help="Plain text. Leave a blank line between paragraphs.">
+                <Textarea name="config.body" rows={6} defaultValue={config.body ?? ""} />
+              </Field>
+
+              <Field label="Portrait image" help="Optional. Shown beside the copy.">
+                <MediaInput name="config.imageUrl" defaultValue={config.imageUrl ?? ""} accept="image/*" />
+              </Field>
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field label="Button label" help="Leave blank for no button.">
+                  <Input name="config.ctaLabel" defaultValue={config.ctaLabel ?? ""} maxLength={60} />
+                </Field>
+                <Field label="Button link" help="A URL, or #section-key.">
+                  <Input name="config.ctaHref" defaultValue={config.ctaHref ?? ""} maxLength={200} />
+                </Field>
+              </div>
+            </>
+          )}
+          {section.type === "gallery" && (
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field label="Grid columns">
+                <Select name="config.columns" defaultValue={String(config.columns ?? 3)}>
+                  {[2, 3, 4].map((count) => (
+                    <option key={count} value={count}>
+                      {count}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="Captions">
+                <Select name="config.showCaptions" defaultValue={config.showCaptions === false ? "false" : "true"}>
+                  <option value="true">Show captions</option>
+                  <option value="false">Hide captions</option>
+                </Select>
+              </Field>
+            </div>
+          )}
+          {section.type === "logos" && (
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field label="Logo treatment">
+                <Select name="config.grayscale" defaultValue={config.grayscale === false ? "false" : "true"}>
+                  <option value="true">Greyscale, colour on hover</option>
+                  <option value="false">Full colour</option>
+                </Select>
+              </Field>
+              <Field label="Loop (seconds)" help="Higher is slower.">
+                <Input
+                  name="config.autoScrollSeconds"
+                  type="number"
+                  min={5}
+                  max={300}
+                  defaultValue={config.autoScrollSeconds ?? 30}
+                />
+              </Field>
+            </div>
+          )}
+          {section.type === "testimonials" && (
+            <Field label="Columns">
+              <Select name="config.columns" defaultValue={String(config.columns ?? 3)}>
+                {[1, 2, 3].map((count) => (
+                  <option key={count} value={count}>
+                    {count}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
+          {section.type === "posts" && (
+            <div className="grid gap-5 sm:grid-cols-3">
+              <Field label="Columns">
+                <Select name="config.columns" defaultValue={String(config.columns ?? 3)}>
+                  {[1, 2, 3].map((count) => (
+                    <option key={count} value={count}>
+                      {count}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="How many" help="0 shows all.">
+                <Input name="config.limit" type="number" min={0} max={24} defaultValue={config.limit ?? 3} />
+              </Field>
+              <Field label="All-posts label">
+                <Input
+                  name="config.ctaAllLabel"
+                  defaultValue={config.ctaAllLabel ?? ""}
+                  placeholder="All posts"
+                  maxLength={40}
+                />
+              </Field>
+            </div>
+          )}
           <Field
             label="Background colour"
             htmlFor={`bg-${section.id}`}
@@ -261,6 +391,11 @@ function AddSection() {
               onChange={(event) => setType(event.target.value)}
             >
               <option value="videos">Video band</option>
+              <option value="intro">About / intro</option>
+              <option value="gallery">Photo gallery</option>
+              <option value="logos">Client logos</option>
+              <option value="testimonials">Testimonials</option>
+              <option value="posts">Blog posts</option>
               <option value="richtext">Free text</option>
               <option value="about">About statement</option>
               <option value="contact">Contact</option>

@@ -16,14 +16,43 @@ import { attempt, fail, readNumber, readString, succeed, type ActionState } from
 // async functions, so re-exporting it from here would break every action in
 // this file's module graph.
 
+/**
+ * Every option any section type can carry. Unknown keys are dropped by Zod,
+ * and each type only submits the inputs its editor renders, so one schema can
+ * serve them all.
+ */
 const configSchema = z.object({
+  /* videos */
   orientation: z.enum(["horizontal", "vertical"]).optional(),
   layout: z.enum(["grid", "marquee"]).optional(),
+  autoScrollSeconds: z.number().min(5).max(300).optional(),
+
+  /* shared */
   background: z.string().max(40).optional(),
   columns: z.number().int().min(1).max(4).optional(),
-  autoScrollSeconds: z.number().min(5).max(300).optional(),
   body: z.string().max(5000).optional(),
+
+  /* intro */
+  eyebrow: z.string().max(120).optional(),
+  heading: z.string().max(200).optional(),
+  imageUrl: z.string().max(600).optional(),
+  imageSide: z.enum(["left", "right"]).optional(),
+  ctaLabel: z.string().max(60).optional(),
+  ctaHref: z.string().max(200).optional(),
+
+  /* gallery / logos / posts */
+  limit: z.number().int().min(0).max(24).optional(),
+  grayscale: z.boolean().optional(),
+  showCaptions: z.boolean().optional(),
+  ctaAllLabel: z.string().max(40).optional(),
 });
+
+/** Selects submit "true"/"false" strings, not checkbox semantics. */
+function readTriState(form: FormData, name: string) {
+  const value = form.get(name);
+  if (typeof value !== "string" || value === "") return undefined;
+  return value === "true";
+}
 
 function readConfig(form: FormData, type: SectionType) {
   const candidate: Record<string, unknown> = {};
@@ -34,16 +63,52 @@ function readConfig(form: FormData, type: SectionType) {
     candidate.columns = readNumber(form, "config.columns", 3);
     candidate.autoScrollSeconds = readNumber(form, "config.autoScrollSeconds", 40);
   }
+
+  if (type === "intro") {
+    candidate.eyebrow = readString(form, "config.eyebrow");
+    candidate.heading = readString(form, "config.heading");
+    candidate.body = readString(form, "config.body");
+    candidate.imageUrl = readString(form, "config.imageUrl");
+    candidate.imageSide = readString(form, "config.imageSide", "right");
+    candidate.ctaLabel = readString(form, "config.ctaLabel");
+    candidate.ctaHref = readString(form, "config.ctaHref");
+  }
+
+  if (type === "gallery") {
+    candidate.columns = readNumber(form, "config.columns", 3);
+    candidate.showCaptions = readTriState(form, "config.showCaptions");
+  }
+
+  if (type === "logos") {
+    candidate.grayscale = readTriState(form, "config.grayscale");
+    candidate.autoScrollSeconds = readNumber(form, "config.autoScrollSeconds", 30);
+  }
+
+  if (type === "testimonials") {
+    candidate.columns = readNumber(form, "config.columns", 3);
+  }
+
+  if (type === "posts") {
+    candidate.columns = readNumber(form, "config.columns", 3);
+    candidate.limit = readNumber(form, "config.limit", 3);
+    candidate.ctaAllLabel = readString(form, "config.ctaAllLabel");
+  }
+
   if (type === "richtext") {
     candidate.body = readString(form, "config.body");
   }
+
   const background = readString(form, "config.background");
   if (background) candidate.background = background;
+
+  // Drop empty optionals so a blank input does not overwrite with "".
+  for (const [key, value] of Object.entries(candidate)) {
+    if (value === undefined || value === "") delete candidate[key];
+  }
 
   const parsed = configSchema.safeParse(candidate);
   return parsed.success ? parsed.data : {};
 }
-
 export async function createSectionAction(_prev: ActionState, form: FormData): Promise<ActionState> {
   return attempt(async () => {
     const session = await requireSession();

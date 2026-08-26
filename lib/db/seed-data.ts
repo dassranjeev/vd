@@ -103,7 +103,7 @@ export const seedSocialLinks = [
 
 export type SeedSection = {
   key: string;
-  type: "hero" | "about" | "videos" | "contact" | "richtext";
+  type: string;
   title: string;
   subtitle: string;
   config: Record<string, unknown>;
@@ -111,6 +111,23 @@ export type SeedSection = {
 
 export const seedSections: SeedSection[] = [
   { key: "hero", type: "hero", title: "", subtitle: "", config: {} },
+  {
+    key: "intro",
+    type: "intro",
+    title: "About",
+    subtitle: "",
+    config: {
+      eyebrow: "Who I am",
+      heading: "Cinematic storytelling, end to end.",
+      body:
+        `I produce, edit and colour work that has to earn attention -- brand films, documentaries and short-form built for the platforms they live on.
+
+From first treatment to final grade, it stays in one pair of hands. That means fewer handoffs, a consistent look, and a film that says what you actually meant.`,
+      imageSide: "right",
+      ctaLabel: "See the work",
+      ctaHref: "#vertical-work",
+    },
+  },
   { key: "about", type: "about", title: "", subtitle: "", config: {} },
   {
     key: "vertical-work",
@@ -125,6 +142,34 @@ export const seedSections: SeedSection[] = [
     title: "Horizontal Videos",
     subtitle: "16:9",
     config: { orientation: "horizontal", layout: "grid", background: "#000000", columns: 3 },
+  },
+  {
+    key: "gallery",
+    type: "gallery",
+    title: "Photos & Graphics",
+    subtitle: "Stills",
+    config: { columns: 3, showCaptions: true, background: "#0a0a0a" },
+  },
+  {
+    key: "clients",
+    type: "logos",
+    title: "Trusted by",
+    subtitle: "",
+    config: { grayscale: true, autoScrollSeconds: 30, background: "#000000" },
+  },
+  {
+    key: "testimonials",
+    type: "testimonials",
+    title: "What clients say",
+    subtitle: "",
+    config: { layout: "grid", columns: 3, background: "#0a0a0a" },
+  },
+  {
+    key: "journal",
+    type: "posts",
+    title: "Journal",
+    subtitle: "Notes",
+    config: { columns: 3, limit: 3, ctaAllLabel: "All posts", background: "#000000" },
   },
   { key: "contact", type: "contact", title: "", subtitle: "", config: {} },
 ];

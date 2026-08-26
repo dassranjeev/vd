@@ -1,7 +1,11 @@
 "use client";
 
 import {
+  Building2,
   Film,
+  Images,
+  Newspaper,
+  Quote,
   Image as ImageIcon,
   LayoutDashboard,
   LayoutTemplate,
@@ -27,6 +31,10 @@ const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/videos", label: "Videos", icon: Film },
   { href: "/admin/sections", label: "Page sections", icon: LayoutTemplate },
+  { href: "/admin/photos", label: "Photos", icon: Images },
+  { href: "/admin/clients", label: "Clients", icon: Building2 },
+  { href: "/admin/testimonials", label: "Testimonials", icon: Quote },
+  { href: "/admin/journal", label: "Journal", icon: Newspaper },
   { href: "/admin/settings", label: "Content & SEO", icon: Settings },
   { href: "/admin/social", label: "Social links", icon: Link2 },
   { href: "/admin/media", label: "Media library", icon: ImageIcon },

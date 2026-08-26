@@ -5,7 +5,12 @@ import { About } from "@/components/site/About";
 import { Analytics } from "@/components/site/Analytics";
 import { Contact } from "@/components/site/Contact";
 import { Footer } from "@/components/site/Footer";
+import { GallerySection } from "@/components/site/GallerySection";
 import { Hero } from "@/components/site/Hero";
+import { IntroSection } from "@/components/site/IntroSection";
+import { LogoCarousel } from "@/components/site/LogoCarousel";
+import { PostsSection } from "@/components/site/PostsSection";
+import { TestimonialsSection } from "@/components/site/TestimonialsSection";
 import { RichTextSection } from "@/components/site/RichTextSection";
 import { VideoModalProvider } from "@/components/site/VideoModalProvider";
 import { VideoSection } from "@/components/site/VideoSection";
@@ -17,7 +22,8 @@ import { getSiteContent, siteOrigin, type PublicSection } from "@/lib/content";
  * one is data — not a deploy.
  */
 export default async function HomePage() {
-  const { settings, sections, videos, social } = await getSiteContent();
+  const { settings, sections, videos, social, photos, logos, testimonials, posts } =
+    await getSiteContent();
 
   if (settings.site.maintenanceMode) {
     return (
@@ -50,8 +56,20 @@ export default async function HomePage() {
         return (
           <Hero key={section.key} site={settings.site} hero={settings.hero} social={social} />
         );
+      case "intro":
+        return <IntroSection key={section.key} section={section} />;
       case "about":
         return <About key={section.key} about={settings.about} />;
+      case "gallery":
+        return <GallerySection key={section.key} section={section} photos={photos} />;
+      case "logos":
+        return <LogoCarousel key={section.key} section={section} logos={logos} />;
+      case "testimonials":
+        return (
+          <TestimonialsSection key={section.key} section={section} testimonials={testimonials} />
+        );
+      case "posts":
+        return <PostsSection key={section.key} section={section} posts={posts} />;
       case "videos": {
         const orientation = String((section.config as { orientation?: string })?.orientation ?? "horizontal");
         return (

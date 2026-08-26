@@ -68,10 +68,19 @@ export async function patchSettingAction(input: {
   });
 }
 
-const SECTION_TEXT_FIELDS = ["title", "subtitle", "body"] as const;
+/** Editable straight onto the sections row. */
+const SECTION_COLUMNS = ["title", "subtitle"] as const;
+
+/** Editable inside the section config blob. */
+const SECTION_CONFIG_FIELDS = ["body", "eyebrow", "heading", "ctaLabel", "ctaHref", "imageUrl"] as const;
+
+const SECTION_TEXT_FIELDS = [...SECTION_COLUMNS, ...SECTION_CONFIG_FIELDS] as const;
 export type SectionTextField = (typeof SECTION_TEXT_FIELDS)[number];
 
-/** Inline edit for a section's own heading, meta label, or rich-text body. */
+/** Prose gets a longer allowance than a heading or label. */
+const MAX_LENGTH: Record<string, number> = { body: 5000 };
+
+/** Inline edit for a section heading, meta label, or any config text field. */
 export async function patchSectionTextAction(input: {
   id: string;
   field: string;
@@ -81,10 +90,10 @@ export async function patchSectionTextAction(input: {
     const session = await requireSession();
 
     if (!(SECTION_TEXT_FIELDS as readonly string[]).includes(input.field)) {
-      return fail(`"${input.field}" isn't an editable section field.`);
+      return fail(`"${input.field}" is not an editable section field.`);
     }
     const field = input.field as SectionTextField;
-    const value = input.value.slice(0, field === "body" ? 5000 : 200);
+    const value = input.value.slice(0, MAX_LENGTH[field] ?? 200);
 
     const db = getDb();
     const [existing] = await db
@@ -94,21 +103,21 @@ export async function patchSectionTextAction(input: {
       .limit(1);
     if (!existing) return fail("That section no longer exists.");
 
-    if (field === "body") {
-      const config = { ...((existing.config ?? {}) as Record<string, unknown>), body: value };
-      await db.update(sections).set({ config, updatedAt: raw`now()` }).where(eq(sections.id, input.id));
-    } else {
+    if ((SECTION_COLUMNS as readonly string[]).includes(field)) {
       await db
         .update(sections)
         .set({ [field]: value, updatedAt: raw`now()` })
         .where(eq(sections.id, input.id));
+    } else {
+      const config = { ...((existing.config ?? {}) as Record<string, unknown>), [field]: value };
+      await db.update(sections).set({ config, updatedAt: raw`now()` }).where(eq(sections.id, input.id));
     }
 
     await recordActivity(session, {
       action: "updated",
       entity: "section",
       entityId: input.id,
-      summary: `inline edit — ${field}`,
+      summary: `inline edit ${field}`,
     });
     revalidateContent("sections");
     return succeed("Saved");

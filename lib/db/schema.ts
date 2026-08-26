@@ -177,3 +177,91 @@ export type SocialLink = typeof socialLinks.$inferSelect;
 export type MediaItem = typeof media.$inferSelect;
 export type Message = typeof messages.$inferSelect;
 export type Activity = typeof activityLog.$inferSelect;
+
+/* ─────────────────── Photos / graphics gallery ─────────────── */
+
+export const photos = pgTable(
+  "photos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    url: text("url").notNull(),
+    alt: text("alt").notNull().default(""),
+    caption: text("caption").notNull().default(""),
+    /** Drives the masonry row-span so tall shots stay tall. */
+    aspect: text("aspect").notNull().default("portrait"),
+    category: text("category").notNull().default(""),
+    published: boolean("published").notNull().default(true),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("photos_position_idx").on(t.position)],
+);
+
+/* ────────────────────── Client logos ───────────────────────── */
+
+export const logos = pgTable(
+  "logos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    imageUrl: text("image_url").notNull().default(""),
+    /** Optional outbound link to the client. */
+    url: text("url").notNull().default(""),
+    enabled: boolean("enabled").notNull().default(true),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("logos_position_idx").on(t.position)],
+);
+
+/* ────────────────────── Testimonials ───────────────────────── */
+
+export const testimonials = pgTable(
+  "testimonials",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    quote: text("quote").notNull(),
+    author: text("author").notNull(),
+    role: text("role").notNull().default(""),
+    company: text("company").notNull().default(""),
+    avatarUrl: text("avatar_url").notNull().default(""),
+    /** 0 hides the stars entirely. */
+    rating: integer("rating").notNull().default(5),
+    featured: boolean("featured").notNull().default(false),
+    published: boolean("published").notNull().default(true),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("testimonials_position_idx").on(t.position)],
+);
+
+/* ───────────────────────── Blog posts ──────────────────────── */
+
+export const posts = pgTable(
+  "posts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: text("title").notNull(),
+    /** URL segment for /blog/[slug]. */
+    slug: text("slug").notNull(),
+    excerpt: text("excerpt").notNull().default(""),
+    /** Plain text with blank-line paragraphs; never rendered as HTML. */
+    body: text("body").notNull().default(""),
+    coverUrl: text("cover_url").notNull().default(""),
+    tags: text("tags").notNull().default(""),
+    readMinutes: integer("read_minutes").notNull().default(0),
+    published: boolean("published").notNull().default(false),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("posts_slug_key").on(t.slug), index("posts_published_idx").on(t.published, t.publishedAt)],
+);
+
+export type Photo = typeof photos.$inferSelect;
+export type Logo = typeof logos.$inferSelect;
+export type Testimonial = typeof testimonials.$inferSelect;
+export type Post = typeof posts.$inferSelect;

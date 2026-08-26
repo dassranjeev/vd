@@ -10,7 +10,12 @@ import { useEditor } from "./EditorProvider";
 /** Where an edited string is persisted. */
 export type EditTarget =
   | { kind: "setting"; group: string; path: string }
-  | { kind: "section"; id: string; field: "title" | "subtitle" | "body" };
+  | {
+      kind: "section";
+      id: string;
+      /** Mirrors SECTION_TEXT_FIELDS in lib/actions/inline.ts. */
+      field: "title" | "subtitle" | "body" | "eyebrow" | "heading" | "ctaLabel" | "ctaHref" | "imageUrl";
+    };
 
 function persist(target: EditTarget, value: string) {
   return target.kind === "setting"

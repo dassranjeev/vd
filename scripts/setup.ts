@@ -28,6 +28,7 @@ async function main() {
 
   if (!seedOnly) console.log(`  ✓ Schema ensured (${report.tablesEnsured} statements)`);
   console.log(`  ✓ Sections seeded: ${report.sectionsSeeded}`);
+  console.log(`  ✓ New sections added: ${report.sectionsAdded}`);
   console.log(`  ✓ Videos seeded: ${report.videosSeeded}`);
   console.log(`  ✓ Social links seeded: ${report.socialSeeded}`);
 
