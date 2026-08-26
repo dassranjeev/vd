@@ -21,10 +21,13 @@ import type { PublicVideo } from "@/lib/types";
 export function VideoMarquee({
   videos,
   durationSeconds,
+  wheelScroll = true,
   renderCard,
 }: {
   videos: PublicVideo[];
   durationSeconds: number;
+  /** Translate a vertical wheel into sideways movement. */
+  wheelScroll?: boolean;
   renderCard: (video: PublicVideo) => React.ReactNode;
 }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -87,6 +90,58 @@ export function VideoMarquee({
       if (resumeTimerRef.current !== null) window.clearTimeout(resumeTimerRef.current);
     };
   }, [durationSeconds]);
+
+  /* ── Mouse wheel ────────────────────────────────────────────────────────
+     A plain wheel has no horizontal axis, so without this the reel can only
+     be dragged. Translating deltaY into sideways movement fixes that, but
+     naively capturing every wheel event would trap the reader: the strip
+     loops forever, so it never reaches an edge at which to hand scrolling
+     back to the page.
+
+     Hence the budget. A gesture may move the reel for a limited distance;
+     past that the handler stops calling preventDefault and the page scrolls
+     normally. Browsing the reel feels natural, and someone scrolling past it
+     is released after a short travel rather than being stuck.
+
+     Attached manually because React's onWheel is passive, so preventDefault
+     inside it would be ignored.                                            */
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el || !wheelScroll) return;
+
+    const BUDGET_PX = 1200;
+    const GESTURE_GAP_MS = 450;
+
+    let budget = 0;
+    let lastEvent = 0;
+
+    const onWheel = (event: WheelEvent) => {
+      // Trackpads and tilt wheels already scroll this natively.
+      if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+      if (event.ctrlKey) return; // pinch-zoom
+
+      const now = performance.now();
+      if (now - lastEvent > GESTURE_GAP_MS) budget = 0;
+      lastEvent = now;
+
+      if (budget >= BUDGET_PX) return; // released for this gesture
+
+      // deltaMode 1 is lines, 2 is pages; normalise both to pixels.
+      const scale = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? el.clientHeight : 1;
+      const delta = event.deltaY * scale;
+
+      budget += Math.abs(delta);
+      event.preventDefault();
+      el.scrollLeft += delta;
+
+      // Don't fight the reader while they are steering.
+      touchPausedRef.current = true;
+      scheduleResume(1200);
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [wheelScroll]);
 
   // Keep the dot indicator in step with wherever the strip actually is.
   useEffect(() => {
@@ -169,6 +224,15 @@ export function VideoMarquee({
     }
   }
 
+  /** Hold the auto-scroll off, then let it drift back in. */
+  function scheduleResume(delay: number) {
+    if (resumeTimerRef.current !== null) window.clearTimeout(resumeTimerRef.current);
+    resumeTimerRef.current = window.setTimeout(() => {
+      touchPausedRef.current = false;
+      resumeTimerRef.current = null;
+    }, delay);
+  }
+
   function onTouchStart(event: React.TouchEvent<HTMLDivElement>) {
     pauseForTouch();
     touchStartXRef.current = event.touches[0]?.clientX ?? 0;
@@ -181,12 +245,8 @@ export function VideoMarquee({
   }
 
   function onTouchEnd() {
-    if (resumeTimerRef.current !== null) window.clearTimeout(resumeTimerRef.current);
     // Long enough for a flick's inertia to finish before we resume.
-    resumeTimerRef.current = window.setTimeout(() => {
-      touchPausedRef.current = false;
-      resumeTimerRef.current = null;
-    }, 2500);
+    scheduleResume(2500);
   }
 
   // A drag or swipe of more than a few pixels should not also open the lightbox.

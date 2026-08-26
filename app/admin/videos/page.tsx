@@ -13,7 +13,7 @@ import {
 } from "@/lib/actions/videos";
 import { requireSession } from "@/lib/auth";
 import { getDb, isDatabaseConfigured, videos as videosTable } from "@/lib/db";
-import { thumbnailFor } from "@/lib/types";
+import { VideoThumb } from "@/components/site/VideoThumb";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -57,9 +57,10 @@ function VideoRow({ video, isFirst, isLast }: { video: Row; isFirst: boolean; is
       </div>
 
       <Link href={`/admin/videos/${video.id}`} className="shrink-0">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={thumbnailFor(video)}
+        <VideoThumb
+          youtubeId={video.youtubeId}
+          orientation={video.orientation}
+          thumbnailUrl={video.thumbnailUrl}
           alt=""
           className={cn(
             "rounded border border-white/[0.08] bg-black object-cover",

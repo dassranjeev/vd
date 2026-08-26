@@ -7,9 +7,10 @@ import { useRouter } from "next/navigation";
 import { Editable } from "@/components/editor/Editable";
 import { useEditor } from "@/components/editor/EditorProvider";
 import { SortableVideos } from "@/components/editor/SortableVideosLoader";
-import { sectionConfig, thumbnailFor, type PublicSection, type PublicVideo } from "@/lib/types";
+import { sectionConfig, type PublicSection, type PublicVideo } from "@/lib/types";
 
 import { VideoMarquee } from "./VideoMarquee";
+import { VideoThumb } from "./VideoThumb";
 import { useVideoModal } from "./VideoModalProvider";
 
 const COLUMN_CLASSES: Record<number, string> = {
@@ -19,15 +20,6 @@ const COLUMN_CLASSES: Record<number, string> = {
   4: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4",
 };
 
-/** Falls back through YouTube's thumbnail variants when a custom one 404s. */
-function handleThumbnailError(event: React.SyntheticEvent<HTMLImageElement>, youtubeId: string) {
-  const img = event.currentTarget;
-  if (!img.src.includes("img.youtube.com")) {
-    img.src = `https://img.youtube.com/vi/${youtubeId}/oardefault.jpg`;
-  } else if (img.src.includes("oardefault")) {
-    img.src = `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`;
-  }
-}
 
 function PlayBadge({ size }: { size: "sm" | "md" }) {
   const box = size === "sm" ? "h-11 w-11" : "h-12 w-12";
@@ -78,15 +70,14 @@ function VideoCard({
           vertical ? "aspect-[9/16]" : "aspect-video"
         }`}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={thumbnailFor(video)}
+        <VideoThumb
+          youtubeId={video.youtubeId}
+          orientation={video.orientation}
+          thumbnailUrl={video.thumbnailUrl}
           alt={video.title}
-          loading="lazy"
           className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 group-hover:opacity-100 ${
             vertical ? "opacity-70" : "opacity-75"
           }`}
-          onError={(event) => handleThumbnailError(event, video.youtubeId)}
         />
 
         {canEdit ? (
@@ -203,6 +194,7 @@ export function VideoSection({
         <VideoMarquee
           videos={videos}
           durationSeconds={duration}
+          wheelScroll={config.wheelScroll !== false}
           renderCard={(video) => (
             <VideoCard video={video} vertical onOpen={() => openVideo(video.youtubeId)} />
           )}

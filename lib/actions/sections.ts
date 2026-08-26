@@ -26,6 +26,7 @@ const configSchema = z.object({
   orientation: z.enum(["horizontal", "vertical"]).optional(),
   layout: z.enum(["grid", "marquee"]).optional(),
   autoScrollSeconds: z.number().min(5).max(300).optional(),
+  wheelScroll: z.boolean().optional(),
 
   /* shared */
   background: z.string().max(40).optional(),
@@ -63,6 +64,7 @@ function readConfig(form: FormData, type: SectionType) {
     candidate.layout = readString(form, "config.layout", "grid");
     candidate.columns = readNumber(form, "config.columns", 3);
     candidate.autoScrollSeconds = readNumber(form, "config.autoScrollSeconds", 40);
+    candidate.wheelScroll = readTriState(form, "config.wheelScroll");
   }
 
   if (type === "intro") {

@@ -23,7 +23,9 @@ import { GripVertical } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { reorderVideosAction } from "@/lib/actions/reorder";
-import { thumbnailFor, type PublicVideo } from "@/lib/types";
+import { type PublicVideo } from "@/lib/types";
+
+import { VideoThumb } from "@/components/site/VideoThumb";
 
 import { useEditor } from "./EditorProvider";
 
@@ -165,9 +167,10 @@ export function SortableVideos({
             }`}
           >
             <div className={`relative bg-neutral-900 ${vertical ? "aspect-[9/16]" : "aspect-video"}`}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={thumbnailFor(active)}
+              <VideoThumb
+                youtubeId={active.youtubeId}
+                orientation={active.orientation}
+                thumbnailUrl={active.thumbnailUrl}
                 alt=""
                 className="absolute inset-0 h-full w-full object-cover"
               />

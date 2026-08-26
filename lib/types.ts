@@ -64,6 +64,8 @@ export type SectionConfig = {
   background?: string;
   columns?: number;
   autoScrollSeconds?: number;
+  /** Let the mouse wheel scroll a marquee band sideways. */
+  wheelScroll?: boolean;
   body?: string;
 
   /* intro */

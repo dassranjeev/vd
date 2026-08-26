@@ -60,6 +60,7 @@ type Config = {
   background?: string;
   columns?: number;
   autoScrollSeconds?: number;
+  wheelScroll?: boolean;
   body?: string;
 };
 
@@ -223,6 +224,21 @@ function SectionCard({
                   max={300}
                   defaultValue={config.autoScrollSeconds ?? 40}
                 />
+              </Field>
+
+              <Field
+                label="Mouse wheel"
+                htmlFor={`wheel-${section.id}`}
+                help="Marquee layout only. Lets the wheel scroll the strip sideways."
+              >
+                <Select
+                  id={`wheel-${section.id}`}
+                  name="config.wheelScroll"
+                  defaultValue={config.wheelScroll === false ? "false" : "true"}
+                >
+                  <option value="true">Wheel scrolls the strip</option>
+                  <option value="false">Wheel scrolls the page</option>
+                </Select>
               </Field>
             </div>
           )}
