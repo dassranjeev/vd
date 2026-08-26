@@ -82,3 +82,44 @@ export async function deleteMediaAction(form: FormData) {
     summary: removed?.filename ?? id,
   });
 }
+
+/**
+ * Records a blob that the browser uploaded directly.
+ *
+ * With client uploads the file never passes through a server route, so nothing
+ * server-side knows it happened. Vercel can call an onUploadCompleted webhook,
+ * but that never reaches localhost, so the client calls this once upload()
+ * resolves. Re-checks auth, and ignores anything not actually in our store.
+ */
+export async function recordUploadedMediaAction(input: {
+  url: string;
+  pathname: string;
+  filename: string;
+  contentType: string;
+  size: number;
+}): Promise<ActionState> {
+  return attempt(async () => {
+    const session = await requireSession();
+
+    if (!/^https:\/\/[a-z0-9-]+\.public\.blob\.vercel-storage\.com\//i.test(input.url)) {
+      return fail("That does not look like a Blob URL.");
+    }
+
+    await getDb().insert(media).values({
+      url: input.url,
+      pathname: input.pathname.slice(0, 500),
+      filename: input.filename.slice(0, 300),
+      contentType: input.contentType.slice(0, 120),
+      size: Number.isFinite(input.size) ? Math.max(0, Math.round(input.size)) : 0,
+      source: "blob",
+      uploadedBy: session.sub,
+    });
+
+    await recordActivity(session, {
+      action: "created",
+      entity: "media",
+      summary: input.filename,
+    });
+    return succeed("Uploaded.");
+  });
+}

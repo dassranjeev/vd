@@ -6,7 +6,7 @@ import { ButtonLink, Card, CardHeader, EmptyState, Notice, PageHeader, StatTile 
 import { requireSession } from "@/lib/auth";
 import { activityLog, getDb, isDatabaseConfigured, messages } from "@/lib/db";
 import { contentCounts } from "@/lib/db/setup";
-import { relativeTime } from "@/lib/utils";
+import { Time } from "@/components/admin/Time";
 
 export const dynamic = "force-dynamic";
 
@@ -161,7 +161,7 @@ export default async function AdminDashboard() {
                     </p>
                   </div>
                   <span className="shrink-0 text-xs text-white/30">
-                    {relativeTime(message.createdAt)}
+                    <Time value={message.createdAt} relative />
                   </span>
                 </li>
               ))}
@@ -185,7 +185,7 @@ export default async function AdminDashboard() {
                     <p className="truncate text-xs text-white/30">{entry.userEmail}</p>
                   </div>
                   <span className="shrink-0 text-xs text-white/30">
-                    {relativeTime(entry.createdAt)}
+                    <Time value={entry.createdAt} relative />
                   </span>
                 </li>
               ))}

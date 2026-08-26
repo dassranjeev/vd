@@ -1,92 +1,89 @@
+import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { NextResponse } from "next/server";
 
-import { recordActivity } from "@/lib/activity";
 import { getSession } from "@/lib/auth";
-import { getDb, media } from "@/lib/db";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
-
-const MAX_BYTES = 100 * 1024 * 1024; // 100 MB — enough for a hero reel.
-const ALLOWED_PREFIXES = ["image/", "video/"];
 
 /**
- * Uploads a file to Vercel Blob and records it in the Media Library.
- * Multipart bodies need a route handler, so this sits outside the server
- * actions the rest of the admin uses.
+ * Issues a short-lived token so the browser can upload straight to Vercel Blob.
+ *
+ * This used to accept the file itself and forward it with `put()`. That works
+ * locally but always fails on Vercel for anything sizeable: serverless
+ * functions cap request bodies at 4.5 MB, so a hero reel or a large still is
+ * rejected with a 413 before the handler even runs.
+ *
+ * With a client upload the bytes never touch the function — only the token
+ * negotiation does — so the practical size limit becomes Blob's, not the
+ * platform's.
  */
+
+const MAX_BYTES = 500 * 1024 * 1024;
+
+const ALLOWED_CONTENT_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/avif",
+  "image/gif",
+  "image/svg+xml",
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+];
+
 export async function POST(request: Request) {
+  // Authorise before revealing anything about how this deployment is set up.
   const session = await getSession();
   if (!session) {
-    return NextResponse.json({ ok: false, error: "Not signed in." }, { status: 401 });
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
 
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
     return NextResponse.json(
       {
-        ok: false,
         error:
-          "No Blob store connected. Create one in the Vercel dashboard (Storage → Blob), or add the asset by URL instead.",
+          "No Blob store connected. Create one in the Vercel dashboard (Storage > Blob), or add the asset by URL instead.",
       },
       { status: 501 },
     );
   }
 
-  let file: File | null = null;
+  let body: HandleUploadBody;
   try {
-    const form = await request.formData();
-    const candidate = form.get("file");
-    if (candidate instanceof File) file = candidate;
+    body = (await request.json()) as HandleUploadBody;
   } catch {
-    return NextResponse.json({ ok: false, error: "Malformed upload." }, { status: 400 });
-  }
-
-  if (!file || file.size === 0) {
-    return NextResponse.json({ ok: false, error: "Choose a file to upload." }, { status: 400 });
-  }
-  if (file.size > MAX_BYTES) {
-    return NextResponse.json({ ok: false, error: "That file is larger than 100 MB." }, { status: 413 });
-  }
-  if (!ALLOWED_PREFIXES.some((prefix) => file!.type.startsWith(prefix))) {
-    return NextResponse.json(
-      { ok: false, error: "Only image and video files can be uploaded." },
-      { status: 415 },
-    );
+    return NextResponse.json({ error: "Malformed upload request." }, { status: 400 });
   }
 
   try {
-    const { put } = await import("@vercel/blob");
-    const blob = await put(`media/${file.name}`, file, {
-      access: "public",
-      addRandomSuffix: true,
-      contentType: file.type,
+    const result = await handleUpload({
+      body,
+      request,
+      // Runs before a token is minted. Throwing here refuses the upload, so this
+      // is the gate that keeps uploads to signed-in editors.
+      onBeforeGenerateToken: async () => {
+        const session = await getSession();
+        if (!session) throw new Error("Not signed in.");
+
+        return {
+          allowedContentTypes: ALLOWED_CONTENT_TYPES,
+          maximumSizeInBytes: MAX_BYTES,
+          addRandomSuffix: true,
+          tokenPayload: JSON.stringify({ userId: session.sub }),
+        };
+      },
+      // Vercel calls this from its own network, so it never fires against
+      // localhost. The media row is recorded by the client instead, once the
+      // upload resolves — see recordUploadedMediaAction.
+      onUploadCompleted: async () => {},
     });
 
-    const [row] = await getDb()
-      .insert(media)
-      .values({
-        url: blob.url,
-        pathname: blob.pathname,
-        filename: file.name,
-        contentType: file.type,
-        size: file.size,
-        source: "blob",
-        uploadedBy: session.sub,
-      })
-      .returning({ id: media.id });
-
-    await recordActivity(session, {
-      action: "created",
-      entity: "media",
-      entityId: row.id,
-      summary: file.name,
-    });
-
-    return NextResponse.json({ ok: true, url: blob.url, id: row.id, filename: file.name });
+    return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : "Upload failed." },
-      { status: 500 },
+      { error: error instanceof Error ? error.message : "Upload failed." },
+      { status: 400 },
     );
   }
 }

@@ -3,6 +3,7 @@
 import { Loader2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 
+import { uploadToBlob } from "./upload-client";
 import { buttonClass, Input } from "./ui";
 
 /**
@@ -26,6 +27,7 @@ export function MediaInput({
   const [value, setValue] = useState(defaultValue);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -34,25 +36,17 @@ export function MediaInput({
 
     setBusy(true);
     setError(null);
-    try {
-      const body = new FormData();
-      body.append("file", file);
-      const response = await fetch("/api/admin/upload", { method: "POST", body });
-      const payload = (await response.json()) as { ok?: boolean; url?: string; error?: string };
+    setProgress(0);
 
-      if (!response.ok || !payload.ok || !payload.url) {
-        setError(payload.error ?? "Upload failed.");
-        return;
-      }
-      setValue(payload.url);
-    } catch {
-      setError("Upload failed — check your connection.");
-    } finally {
-      setBusy(false);
-      if (fileRef.current) fileRef.current.value = "";
-    }
+    const result = await uploadToBlob(file, setProgress);
+
+    setBusy(false);
+    setProgress(null);
+    if (fileRef.current) fileRef.current.value = "";
+
+    if (result.ok) setValue(result.url);
+    else setError(result.error);
   }
-
   const isVideo = /\.(mp4|webm|mov|m4v)(\?|$)/i.test(value);
   const isImage = /\.(png|jpe?g|gif|webp|avif|svg)(\?|$)/i.test(value);
 
@@ -74,7 +68,9 @@ export function MediaInput({
           title="Upload a file to the media library"
         >
           {busy ? <Loader2 className="animate-spin" /> : <Upload />}
-          <span className="hidden sm:inline">{busy ? "Uploading…" : "Upload"}</span>
+          <span className="hidden sm:inline">
+            {busy ? (progress === null ? "Uploading…" : `${progress}%`) : "Upload"}
+          </span>
         </button>
       </div>
 

@@ -11,7 +11,8 @@ import {
 } from "@/lib/actions/messages";
 import { requireSession } from "@/lib/auth";
 import { getDb, isDatabaseConfigured, messages } from "@/lib/db";
-import { cn, formatDate } from "@/lib/utils";
+import { Time } from "@/components/admin/Time";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -125,7 +126,7 @@ export default async function MessagesPage({
                     {message.email}
                   </a>
                 </div>
-                <span className="shrink-0 text-xs text-white/30">{formatDate(message.createdAt)}</span>
+                <Time value={message.createdAt} className="shrink-0 text-xs text-white/30" />
               </div>
 
               {message.subject && (

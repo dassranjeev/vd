@@ -35,11 +35,23 @@ export function formatBytes(bytes: number) {
   return `${value.toFixed(value >= 10 || exponent === 0 ? 0 : 1)} ${units[exponent]}`;
 }
 
-export function formatDate(date: Date | string | null | undefined) {
+/**
+ * Absolute timestamp.
+ *
+ * The time zone is pinned rather than left to the runtime. Without it the
+ * server (UTC on Vercel) and the browser (whatever the reader is in) format
+ * the same instant differently, which is a guaranteed hydration mismatch.
+ * Pass a zone explicitly from client code that wants local time.
+ */
+export function formatDate(
+  date: Date | string | null | undefined,
+  timeZone: string | undefined = "UTC",
+) {
   if (!date) return "—";
   const parsed = typeof date === "string" ? new Date(date) : date;
   if (Number.isNaN(parsed.getTime())) return "—";
   return parsed.toLocaleString("en-CA", {
+    timeZone,
     year: "numeric",
     month: "short",
     day: "numeric",

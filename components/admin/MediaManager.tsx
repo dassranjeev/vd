@@ -6,9 +6,12 @@ import { useActionState, useRef, useState } from "react";
 import { addExternalMediaAction, deleteMediaAction } from "@/lib/actions/media";
 import { idleState } from "@/lib/actions/types";
 import type { MediaItem } from "@/lib/db";
-import { formatBytes, relativeTime } from "@/lib/utils";
+import { formatBytes } from "@/lib/utils";
+
+import { Time } from "./Time";
 
 import { ConfirmSubmit, FormFeedback, SubmitButton } from "./form";
+import { uploadToBlob } from "./upload-client";
 import { Badge, buttonClass, Card, CardHeader, EmptyState, Field, Input, Notice } from "./ui";
 
 function CopyButton({ url }: { url: string }) {
@@ -38,41 +41,39 @@ function CopyButton({ url }: { url: string }) {
 function Uploader({ enabled }: { enabled: boolean }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [progress, setProgress] = useState<number | null>(null);
+  const [current, setCurrent] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  async function upload(files: FileList | null) {
+  async function runUploads(files: FileList | null) {
     if (!files || files.length === 0) return;
     setBusy(true);
     setMessage(null);
 
+    const list = Array.from(files);
     let uploaded = 0;
     let lastError = "";
 
-    for (const file of Array.from(files)) {
-      const body = new FormData();
-      body.append("file", file);
-      try {
-        const response = await fetch("/api/admin/upload", { method: "POST", body });
-        const payload = (await response.json()) as { ok?: boolean; error?: string };
-        if (response.ok && payload.ok) uploaded += 1;
-        else lastError = payload.error ?? "Upload failed.";
-      } catch {
-        lastError = "Network error during upload.";
-      }
+    for (const [index, file] of list.entries()) {
+      setCurrent(`${file.name} (${index + 1}/${list.length})`);
+      const result = await uploadToBlob(file, setProgress);
+      if (result.ok) uploaded += 1;
+      else lastError = result.error;
     }
 
     setBusy(false);
+    setCurrent(null);
+    setProgress(null);
     if (fileRef.current) fileRef.current.value = "";
 
     if (uploaded > 0) {
       setMessage({ ok: true, text: `Uploaded ${uploaded} file(s). Refreshing…` });
-      // The list is a server component; a reload is the simplest way to refresh.
+      // The library list is server-rendered, so reload to pick the rows up.
       window.location.reload();
     } else {
       setMessage({ ok: false, text: lastError || "Nothing was uploaded." });
     }
   }
-
   return (
     <div className="space-y-3">
       <button
@@ -82,7 +83,7 @@ function Uploader({ enabled }: { enabled: boolean }) {
         className={buttonClass("primary", "md")}
       >
         {busy ? <Loader2 className="animate-spin" /> : <Upload />}
-        {busy ? "Uploading…" : "Upload files"}
+        {busy ? (progress === null ? "Uploading…" : `Uploading ${progress}%`) : "Upload files"}
       </button>
 
       <input
@@ -91,8 +92,12 @@ function Uploader({ enabled }: { enabled: boolean }) {
         multiple
         accept="image/*,video/*"
         hidden
-        onChange={(event) => upload(event.target.files)}
+        onChange={(event) => runUploads(event.target.files)}
       />
+
+      {busy && current && (
+        <p className="truncate text-xs text-white/40">{current}</p>
+      )}
 
       {message && (
         <p className={message.ok ? "text-xs text-emerald-300" : "text-xs text-red-400"}>
@@ -177,7 +182,7 @@ export function MediaManager({ items, blobEnabled }: { items: MediaItem[]; blobE
                     <div className="flex flex-wrap items-center gap-1.5">
                       <Badge tone={item.source === "blob" ? "success" : "neutral"}>{item.source}</Badge>
                       {item.size > 0 && <Badge>{formatBytes(item.size)}</Badge>}
-                      <span className="text-[10px] text-white/30">{relativeTime(item.createdAt)}</span>
+                      <Time value={item.createdAt} relative className="text-[10px] text-white/30" />
                     </div>
 
                     <div className="flex items-center justify-between gap-1 pt-1">
