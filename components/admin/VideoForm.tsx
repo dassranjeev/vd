@@ -6,7 +6,9 @@ import { useActionState, useState } from "react";
 import { createVideoAction, updateVideoAction } from "@/lib/actions/videos";
 import { idleState } from "@/lib/actions/types";
 import type { Video } from "@/lib/db";
-import { extractYouTubeId } from "@/lib/utils";
+import { extractYouTubeId, isYouTubeShortsLink } from "@/lib/utils";
+
+import { VideoThumb } from "@/components/site/VideoThumb";
 
 import { FormFeedback, SubmitButton, ToggleField } from "./form";
 import { MediaInput } from "./MediaInput";
@@ -18,6 +20,11 @@ export function VideoForm({ video }: { video?: Video }) {
 
   const [link, setLink] = useState(video?.youtubeId ?? "");
   const [orientation, setOrientation] = useState(video?.orientation ?? "horizontal");
+  /* Only auto-pick for a new video, and stop as soon as the editor chooses
+     for themselves — silently overriding a deliberate choice is worse than
+     not helping at all. */
+  const [orientationChosen, setOrientationChosen] = useState(Boolean(video));
+  const [autoVertical, setAutoVertical] = useState(false);
 
   const resolvedId = extractYouTubeId(link);
   const looksValid = /^[a-zA-Z0-9_-]{11}$/.test(resolvedId);
@@ -55,7 +62,21 @@ export function VideoForm({ video }: { video?: Video }) {
                   id="youtubeId"
                   name="youtubeId"
                   value={link}
-                  onChange={(event) => setLink(event.target.value)}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    setLink(next);
+
+                    // A Short is vertical by definition, so put it in the 9:16
+                    // band rather than leaving it in the 16:9 default.
+                    const short = isYouTubeShortsLink(next);
+                    if (short && !orientationChosen) {
+                      setOrientation("vertical");
+                      setAutoVertical(true);
+                    } else if (!short && autoVertical && !orientationChosen) {
+                      setOrientation("horizontal");
+                      setAutoVertical(false);
+                    }
+                  }}
                   required
                   placeholder="https://www.youtube.com/watch?v=…"
                 />
@@ -91,13 +112,21 @@ export function VideoForm({ video }: { video?: Video }) {
               <Field
                 label="Orientation"
                 htmlFor="orientation"
-                help="Vertical videos appear in the 9:16 marquee, horizontal ones in the 16:9 grid."
+                help={
+                  autoVertical
+                    ? "Set to vertical automatically because this is a Short. Change it if you disagree."
+                    : "Vertical videos appear in the 9:16 marquee, horizontal ones in the 16:9 grid."
+                }
               >
                 <Select
                   id="orientation"
                   name="orientation"
                   value={orientation}
-                  onChange={(event) => setOrientation(event.target.value)}
+                  onChange={(event) => {
+                    setOrientation(event.target.value);
+                    setOrientationChosen(true);
+                    setAutoVertical(false);
+                  }}
                 >
                   <option value="horizontal">Horizontal — 16:9</option>
                   <option value="vertical">Vertical — 9:16</option>
@@ -136,14 +165,21 @@ export function VideoForm({ video }: { video?: Video }) {
             {looksValid && (
               <div className="mt-4">
                 <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-white/45">
-                  YouTube preview
+                  Thumbnail preview
                 </p>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`https://img.youtube.com/vi/${resolvedId}/hqdefault.jpg`}
-                  alt=""
-                  className="w-full rounded-md border border-white/[0.08]"
-                />
+                <div
+                  className={`overflow-hidden rounded-md border border-white/[0.08] bg-black ${
+                    orientation === "vertical" ? "aspect-[9/16] w-32" : "aspect-video w-full"
+                  }`}
+                >
+                  <VideoThumb
+                    youtubeId={resolvedId}
+                    orientation={orientation}
+                    alt=""
+                    loading="eager"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
               </div>
             )}
           </Card>

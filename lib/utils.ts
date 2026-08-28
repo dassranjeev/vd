@@ -27,6 +27,16 @@ export function extractYouTubeId(input: string): string {
   return value;
 }
 
+/**
+ * True when a link is a YouTube Short.
+ *
+ * Shorts are vertical by definition, so the admin uses this to pick the right
+ * band instead of leaving everything in the 16:9 default.
+ */
+export function isYouTubeShortsLink(input: string): boolean {
+  return /youtube\.com\/shorts\//i.test(input.trim());
+}
+
 export function formatBytes(bytes: number) {
   if (!bytes) return "—";
   const units = ["B", "KB", "MB", "GB"];

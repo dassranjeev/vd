@@ -8,7 +8,7 @@ import { recordActivity } from "@/lib/activity";
 import { requireSession } from "@/lib/auth";
 import { revalidateContent } from "@/lib/cache";
 import { getDb, videos } from "@/lib/db";
-import { extractYouTubeId } from "@/lib/utils";
+import { extractYouTubeId, isYouTubeShortsLink } from "@/lib/utils";
 
 import { attempt, fail, readBoolean, readString, succeed, type ActionState } from "./types";
 
@@ -253,10 +253,14 @@ export async function bulkImportVideosAction(_prev: ActionState, form: FormData)
         skipped.push(line);
         continue;
       }
+      // A Short is vertical whatever the dropdown says, so a mixed paste
+      // still lands in the right bands.
+      const rowOrientation = isYouTubeShortsLink(linkPart ?? "") ? "vertical" : orientation;
+
       rows.push({
         title: titlePart || `Untitled (${youtubeId})`,
         youtubeId,
-        orientation,
+        orientation: rowOrientation,
         published: false, // Land as drafts so titles can be filled in first.
         position: position++,
       });
