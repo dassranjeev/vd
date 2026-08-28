@@ -20,13 +20,28 @@ export const runtime = "nodejs";
 
 const MAX_BYTES = 500 * 1024 * 1024;
 
+/**
+ * Anything a browser will realistically hand us.
+ *
+ * HEIC and HEIF matter in particular: photos straight off an iPhone arrive
+ * as those, and rejecting them looks to an editor like the uploader is simply
+ * broken rather than being picky about formats.
+ *
+ * An empty type is not a problem — the client SDK infers one from the file
+ * extension when the browser reports none.
+ */
 const ALLOWED_CONTENT_TYPES = [
   "image/jpeg",
+  "image/jpg",
   "image/png",
   "image/webp",
   "image/avif",
   "image/gif",
   "image/svg+xml",
+  "image/heic",
+  "image/heif",
+  "image/bmp",
+  "image/tiff",
   "video/mp4",
   "video/webm",
   "video/quicktime",

@@ -45,7 +45,27 @@ export async function uploadToBlob(
     }
     return { ok: true, url: blob.url };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Upload failed.";
-    return { ok: false, error: message };
+    const raw = error instanceof Error ? error.message : String(error);
+
+    // The SDK surfaces token-endpoint failures as a generic message, which
+    // tells an editor nothing. Name the causes they can actually act on.
+    if (/Blob store|501/i.test(raw)) {
+      return {
+        ok: false,
+        error:
+          "Uploads need a Vercel Blob store. Add one under Storage in the Vercel dashboard and redeploy, or paste an image URL instead.",
+      };
+    }
+    if (/not signed in|401|unauthor/i.test(raw)) {
+      return { ok: false, error: "Your session expired. Reload the page and sign in again." };
+    }
+    if (/content type|allowed/i.test(raw)) {
+      return { ok: false, error: `That file type is not accepted. ${raw}` };
+    }
+    if (/size|too large|413/i.test(raw)) {
+      return { ok: false, error: "That file is too large." };
+    }
+
+    return { ok: false, error: raw || "Upload failed." };
   }
 }

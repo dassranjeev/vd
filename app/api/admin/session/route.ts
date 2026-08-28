@@ -17,7 +17,15 @@ export async function GET() {
 
   return NextResponse.json(
     session
-      ? { editor: true, name: session.name, email: session.email, role: session.role }
+      ? {
+          editor: true,
+          name: session.name,
+          email: session.email,
+          role: session.role,
+          // Lets the admin explain up front that uploads need a Blob store,
+          // rather than only failing once a file has been chosen.
+          blobEnabled: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+        }
       : { editor: false },
     { headers: { "Cache-Control": "no-store, private" } },
   );
