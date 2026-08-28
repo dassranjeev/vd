@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { youtubeThumbnailTiers } from "@/lib/youtube";
 import { cn } from "@/lib/utils";
 
 /**
@@ -29,27 +30,13 @@ export function thumbnailCandidates({
   orientation: string;
   thumbnailUrl?: string;
 }): string[] {
-  const base = `https://img.youtube.com/vi/${youtubeId}`;
+  const tiers = youtubeThumbnailTiers(youtubeId, orientation);
 
-  const youtube =
-    orientation === "vertical"
-      ? // Tall frame first so a Short fills a 9:16 card rather than sitting in bars.
-        [
-          `${base}/oardefault.jpg`,
-          `${base}/maxresdefault.jpg`,
-          `${base}/sddefault.jpg`,
-          `${base}/hqdefault.jpg`,
-          `${base}/mqdefault.jpg`,
-        ]
-      : [
-          `${base}/maxresdefault.jpg`,
-          `${base}/sddefault.jpg`,
-          `${base}/hqdefault.jpg`,
-          `${base}/mqdefault.jpg`,
-        ];
-
-  // A custom thumbnail wins, but YouTube still backs it up if it 404s.
-  return thumbnailUrl ? [thumbnailUrl, ...youtube] : youtube;
+  // A stored thumbnail is tried first — it is normally the one the server
+  // already resolved — with the rest of the ladder behind it in case the
+  // video's artwork has changed since.
+  if (!thumbnailUrl) return tiers;
+  return [thumbnailUrl, ...tiers.filter((tier) => tier !== thumbnailUrl)];
 }
 
 /**

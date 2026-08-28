@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp, Pencil, Plus, Star, Trash2 } from "lucide-react
 import Link from "next/link";
 
 import { BulkImport } from "@/components/admin/BulkImport";
+import { RefreshThumbnails } from "@/components/admin/RefreshThumbnails";
 import { ConfirmSubmit, SubmitButton } from "@/components/admin/form";
 import { Badge, ButtonLink, Card, EmptyState, Notice, PageHeader } from "@/components/admin/ui";
 import {
@@ -173,10 +174,13 @@ export default async function VideosPage() {
         title="Videos"
         description="The reel. Order here is the order on the homepage, so reorder with the arrows."
         action={
-          <ButtonLink href="/admin/videos/new" variant="primary">
-            <Plus />
-            Add video
-          </ButtonLink>
+          <div className="flex items-center gap-2">
+            <RefreshThumbnails />
+            <ButtonLink href="/admin/videos/new" variant="primary">
+              <Plus />
+              Add video
+            </ButtonLink>
+          </div>
         }
       />
 

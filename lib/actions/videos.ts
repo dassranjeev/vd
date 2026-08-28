@@ -9,6 +9,8 @@ import { requireSession } from "@/lib/auth";
 import { revalidateContent } from "@/lib/cache";
 import { getDb, videos } from "@/lib/db";
 import { extractYouTubeId, isYouTubeShortsLink } from "@/lib/utils";
+import { isDerivedYouTubeThumbnail } from "@/lib/youtube";
+import { resolveBestThumbnail } from "@/lib/youtube-resolve";
 
 import { attempt, fail, readBoolean, readString, succeed, type ActionState } from "./types";
 
@@ -67,9 +69,20 @@ export async function createVideoAction(_prev: ActionState, form: FormData): Pro
     }
 
     const db = getDb();
+
+    // No custom thumbnail: ask YouTube for the best one it actually has, so
+    // the artwork is stored rather than guessed at render time.
+    const thumbnailUrl =
+      parsed.data.thumbnailUrl ||
+      (await resolveBestThumbnail(parsed.data.youtubeId, parsed.data.orientation));
+
     const [created] = await db
       .insert(videos)
-      .values({ ...parsed.data, position: await nextPosition(db, parsed.data.orientation) })
+      .values({
+        ...parsed.data,
+        thumbnailUrl,
+        position: await nextPosition(db, parsed.data.orientation),
+      })
       .returning({ id: videos.id });
 
     await recordActivity(session, {
@@ -111,10 +124,22 @@ export async function updateVideoAction(_prev: ActionState, form: FormData): Pro
         ? undefined
         : await nextPosition(db, parsed.data.orientation);
 
+    // Re-resolve when there is nothing stored, or when the shape changed
+    // under a URL this app derived — the best tier differs per orientation.
+    const orientationChanged = existing.orientation !== parsed.data.orientation;
+    const shouldResolve =
+      !parsed.data.thumbnailUrl ||
+      (orientationChanged && isDerivedYouTubeThumbnail(parsed.data.thumbnailUrl));
+
+    const thumbnailUrl = shouldResolve
+      ? await resolveBestThumbnail(parsed.data.youtubeId, parsed.data.orientation)
+      : parsed.data.thumbnailUrl;
+
     await db
       .update(videos)
       .set({
         ...parsed.data,
+        thumbnailUrl,
         ...(position === undefined ? {} : { position }),
         updatedAt: raw`now()`,
       })
@@ -268,6 +293,12 @@ export async function bulkImportVideosAction(_prev: ActionState, form: FormData)
 
     if (rows.length === 0) return fail("None of those lines contained a valid YouTube link.");
 
+    // Resolve each row's artwork up front; a paste of a dozen links is still
+    // only a dozen HEAD requests.
+    for (const row of rows) {
+      row.thumbnailUrl = await resolveBestThumbnail(row.youtubeId, row.orientation ?? "horizontal");
+    }
+
     await db.insert(videos).values(rows);
     await recordActivity(session, {
       action: "created",
@@ -278,5 +309,60 @@ export async function bulkImportVideosAction(_prev: ActionState, form: FormData)
 
     const suffix = skipped.length > 0 ? ` ${skipped.length} line(s) were skipped.` : "";
     return succeed(`Imported ${rows.length} video(s) as drafts.${suffix}`);
+  });
+}
+
+/**
+ * Re-asks YouTube for every video's thumbnail.
+ *
+ * Artwork is resolved when a video is saved, but a creator can change it
+ * afterwards, and older rows predate this being stored at all. Skips any
+ * video whose thumbnail was set by hand.
+ */
+export async function refreshThumbnailsAction(
+  _prev: ActionState,
+  _form: FormData,
+): Promise<ActionState> {
+  return attempt(async () => {
+    const session = await requireSession();
+    const db = getDb();
+
+    const rows = await db
+      .select({
+        id: videos.id,
+        youtubeId: videos.youtubeId,
+        orientation: videos.orientation,
+        thumbnailUrl: videos.thumbnailUrl,
+      })
+      .from(videos);
+
+    let updated = 0;
+    let kept = 0;
+
+    for (const row of rows) {
+      if (row.thumbnailUrl && !isDerivedYouTubeThumbnail(row.thumbnailUrl)) {
+        kept += 1; // set by hand, leave it alone
+        continue;
+      }
+
+      const resolved = await resolveBestThumbnail(row.youtubeId, row.orientation);
+      if (!resolved || resolved === row.thumbnailUrl) continue;
+
+      await db
+        .update(videos)
+        .set({ thumbnailUrl: resolved, updatedAt: raw`now()` })
+        .where(eq(videos.id, row.id));
+      updated += 1;
+    }
+
+    await recordActivity(session, {
+      action: "updated",
+      entity: "video",
+      summary: `refreshed ${updated} thumbnail(s) from YouTube`,
+    });
+    revalidateContent("videos");
+
+    const suffix = kept > 0 ? ` ${kept} custom thumbnail(s) left untouched.` : "";
+    return succeed(`Refreshed ${updated} thumbnail(s).${suffix}`);
   });
 }
