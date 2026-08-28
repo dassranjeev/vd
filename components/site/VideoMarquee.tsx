@@ -42,6 +42,12 @@ export function VideoMarquee({
   const draggingRef = useRef(false);
   const dragMovedRef = useRef(0);
   const dragStartRef = useRef({ x: 0, scroll: 0 });
+  /* Pointer capture is taken only once a drag actually starts. Capturing on
+     pointerdown makes the browser dispatch the following click at the
+     capturing element rather than the card underneath, which stopped the
+     lightbox opening. */
+  const pressedRef = useRef(false);
+  const capturedRef = useRef(false);
   const touchStartXRef = useRef(0);
   /* An arrow or dot press animates through the same rAF loop as the drift.
      Native smooth scrolling cannot be used here: the loop assigns scrollLeft
@@ -56,6 +62,7 @@ export function VideoMarquee({
   const scrubbingRef = useRef(false);
   const scrubMovedRef = useRef(0);
   const scrubStartXRef = useRef(0);
+  const scrubCapturedRef = useRef(false);
 
   const [activeIndex, setActiveIndex] = useState(0);
   const total = videos.length;
@@ -260,27 +267,43 @@ export function VideoMarquee({
     // cursor), which would fight this drag.
     if (event.button === 1) event.preventDefault();
 
-    draggingRef.current = true;
+    // Armed, not dragging: a plain press must stay a plain click.
+    pressedRef.current = true;
+    draggingRef.current = false;
+    capturedRef.current = false;
     glideRef.current = null;
     dragMovedRef.current = 0;
     dragStartRef.current = { x: event.clientX, scroll: el.scrollLeft };
-    el.setPointerCapture(event.pointerId);
   }
 
+  const DRAG_THRESHOLD_PX = 4;
+
   function onPointerMove(event: React.PointerEvent<HTMLDivElement>) {
-    if (!draggingRef.current) return;
+    if (!pressedRef.current) return;
     const el = scrollerRef.current;
     if (!el) return;
 
     const dx = event.clientX - dragStartRef.current.x;
     dragMovedRef.current = Math.max(dragMovedRef.current, Math.abs(dx));
+
+    if (!draggingRef.current) {
+      if (Math.abs(dx) <= DRAG_THRESHOLD_PX) return;
+      // Now it is a drag: take capture so it keeps tracking outside the strip.
+      draggingRef.current = true;
+      capturedRef.current = true;
+      el.setPointerCapture(event.pointerId);
+    }
+
     el.scrollLeft = dragStartRef.current.scroll - dx;
   }
 
   function endDrag(event: React.PointerEvent<HTMLDivElement>) {
-    if (!draggingRef.current) return;
+    if (capturedRef.current) {
+      scrollerRef.current?.releasePointerCapture(event.pointerId);
+      capturedRef.current = false;
+    }
+    pressedRef.current = false;
     draggingRef.current = false;
-    scrollerRef.current?.releasePointerCapture(event.pointerId);
   }
 
   /* ── Finger scrolling ──────────────────────────────────────────────────
@@ -348,6 +371,7 @@ export function VideoMarquee({
     if (event.pointerType === "mouse" && event.button === 1) event.preventDefault();
 
     scrubbingRef.current = true;
+    scrubCapturedRef.current = false;
     scrubMovedRef.current = 0;
     scrubStartXRef.current = event.clientX;
 
@@ -358,7 +382,8 @@ export function VideoMarquee({
       window.clearTimeout(resumeTimerRef.current);
       resumeTimerRef.current = null;
     }
-    event.currentTarget.setPointerCapture(event.pointerId);
+    // Deliberately no setPointerCapture here: capturing on press would send
+    // the click to the strip instead of the dot the reader aimed at.
   }
 
   function onScrubMove(event: React.PointerEvent<HTMLDivElement>) {
@@ -368,13 +393,24 @@ export function VideoMarquee({
       scrubMovedRef.current,
       Math.abs(event.clientX - scrubStartXRef.current),
     );
-    if (scrubMovedRef.current > 4) scrubTo(event.clientX);
+
+    if (scrubMovedRef.current <= DRAG_THRESHOLD_PX) return;
+
+    if (!scrubCapturedRef.current) {
+      scrubCapturedRef.current = true;
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+    scrubTo(event.clientX);
   }
 
   function onScrubUp(event: React.PointerEvent<HTMLDivElement>) {
     if (!scrubbingRef.current) return;
     scrubbingRef.current = false;
-    event.currentTarget.releasePointerCapture(event.pointerId);
+
+    if (scrubCapturedRef.current) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+      scrubCapturedRef.current = false;
+    }
     scheduleResume(1600);
   }
 
