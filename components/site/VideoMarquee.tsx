@@ -49,6 +49,14 @@ export function VideoMarquee({
      scroll, so the buttons moved the strip by one frame and stopped. */
   const glideRef = useRef<{ from: number; to: number; start: number } | null>(null);
 
+  /* The dot strip doubles as a scrubber: press and drag along it to move
+     through the reel. Same three inputs as the strip itself — left button,
+     middle button, and touch. */
+  const scrubRef = useRef<HTMLDivElement>(null);
+  const scrubbingRef = useRef(false);
+  const scrubMovedRef = useRef(0);
+  const scrubStartXRef = useRef(0);
+
   const [activeIndex, setActiveIndex] = useState(0);
   const total = videos.length;
 
@@ -240,9 +248,17 @@ export function VideoMarquee({
      wired up for mice only: hijacking touch would fight the browser.        */
 
   function onPointerDown(event: React.PointerEvent<HTMLDivElement>) {
-    if (event.pointerType !== "mouse" || event.button !== 0) return;
+    // Left or middle button. Touch is left to the browser, which scrolls this
+    // natively and does it better than a hand-rolled drag would.
+    if (event.pointerType !== "mouse") return;
+    if (event.button !== 0 && event.button !== 1) return;
+
     const el = scrollerRef.current;
     if (!el) return;
+
+    // Middle-press otherwise starts the browser's own autoscroll (a panning
+    // cursor), which would fight this drag.
+    if (event.button === 1) event.preventDefault();
 
     draggingRef.current = true;
     glideRef.current = null;
@@ -307,6 +323,70 @@ export function VideoMarquee({
     scheduleResume(2500);
   }
 
+  /**
+   * Maps a position along the dot strip onto the reel.
+   *
+   * The strip spans exactly one loop, so the fraction across it is the
+   * fraction through the videos. Sets scrollLeft directly rather than
+   * gliding, so the reel tracks the pointer instead of chasing it.
+   */
+  function scrubTo(clientX: number) {
+    const strip = scrubRef.current;
+    const el = scrollerRef.current;
+    if (!strip || !el) return;
+
+    const rect = strip.getBoundingClientRect();
+    const fraction = Math.min(1, Math.max(0, (clientX - rect.left) / Math.max(1, rect.width)));
+
+    glideRef.current = null;
+    touchPausedRef.current = true;
+    el.scrollLeft = fraction * (el.scrollWidth / 2);
+  }
+
+  function onScrubDown(event: React.PointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "mouse" && event.button !== 0 && event.button !== 1) return;
+    if (event.pointerType === "mouse" && event.button === 1) event.preventDefault();
+
+    scrubbingRef.current = true;
+    scrubMovedRef.current = 0;
+    scrubStartXRef.current = event.clientX;
+
+    // Held, not yet moved: a plain tap should still fall through to the dot
+    // underneath, so nothing jumps until the pointer actually travels.
+    touchPausedRef.current = true;
+    if (resumeTimerRef.current !== null) {
+      window.clearTimeout(resumeTimerRef.current);
+      resumeTimerRef.current = null;
+    }
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function onScrubMove(event: React.PointerEvent<HTMLDivElement>) {
+    if (!scrubbingRef.current) return;
+
+    scrubMovedRef.current = Math.max(
+      scrubMovedRef.current,
+      Math.abs(event.clientX - scrubStartXRef.current),
+    );
+    if (scrubMovedRef.current > 4) scrubTo(event.clientX);
+  }
+
+  function onScrubUp(event: React.PointerEvent<HTMLDivElement>) {
+    if (!scrubbingRef.current) return;
+    scrubbingRef.current = false;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    scheduleResume(1600);
+  }
+
+  /** A scrub should not also register as a click on whichever dot it ended on. */
+  function onScrubClickCapture(event: React.MouseEvent<HTMLDivElement>) {
+    if (scrubMovedRef.current > 4) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    scrubMovedRef.current = 0;
+  }
+
   // A drag or swipe of more than a few pixels should not also open the lightbox.
   function onClickCapture(event: React.MouseEvent<HTMLDivElement>) {
     if (dragMovedRef.current > 6) {
@@ -346,6 +426,11 @@ export function VideoMarquee({
         onTouchEnd={onTouchEnd}
         onTouchCancel={onTouchEnd}
         onClickCapture={onClickCapture}
+        // Suppress the middle-click side effects the browser would add:
+        // autoscroll on Windows, and opening a card in a new tab.
+        onAuxClick={(event) => {
+          if (event.button === 1) event.preventDefault();
+        }}
         role="group"
         aria-label="Vertical video reel. Scroll sideways or drag to browse."
       >
@@ -377,7 +462,20 @@ export function VideoMarquee({
           </svg>
         </button>
 
-        <div className="flex gap-2">
+        <div
+          ref={scrubRef}
+          className="vd-scrub flex cursor-ew-resize gap-2 py-3"
+          onPointerDown={onScrubDown}
+          onPointerMove={onScrubMove}
+          onPointerUp={onScrubUp}
+          onPointerCancel={onScrubUp}
+          onClickCapture={onScrubClickCapture}
+          onAuxClick={(event) => {
+            if (event.button === 1) event.preventDefault();
+          }}
+          role="group"
+          aria-label="Reel position. Drag to scrub."
+        >
           {videos.map((video, index) => (
             <button
               key={video.id}

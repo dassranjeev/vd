@@ -134,6 +134,22 @@
   user-select: none;
 }
 
+/* The dot strip is also a scrubber. pan-y keeps a vertical swipe scrolling the
+   page while a horizontal drag comes to us as pointer events. */
+.vd-scrub {
+  touch-action: pan-y;
+}
+
+.vd-scrub:active {
+  cursor: grabbing;
+}
+
+/* No text selection while dragging the strip or the scrubber. */
+.vd-scrub:active,
+.vd-scrub:active * {
+  user-select: none;
+}
+
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
