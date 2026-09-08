@@ -8,6 +8,7 @@ import { Editable } from "@/components/editor/Editable";
 import { useEditor } from "@/components/editor/EditorProvider";
 import { sectionConfig, type PublicPost, type PublicSection } from "@/lib/types";
 import { formatPostDate } from "@/lib/utils";
+import { stripMarkup, textProps } from "@/lib/rich-text-shared";
 
 const COLUMN_CLASSES: Record<number, string> = {
   1: "grid-cols-1",
@@ -98,7 +99,7 @@ export function PostsSection({
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
                         src={post.coverUrl}
-                        alt={post.title}
+                        alt={stripMarkup(post.title)}
                         loading="lazy"
                         className="absolute inset-0 h-full w-full object-cover opacity-75 transition-all duration-500 group-hover:scale-[1.03] group-hover:opacity-100"
                       />
@@ -124,12 +125,12 @@ export function PostsSection({
                       className="mt-2 text-lg font-semibold leading-snug text-white/90 transition-colors group-hover:text-white"
                       style={{ fontFamily: "'Syne', sans-serif" }}
                     >
-                      {post.title}
+                      <span {...textProps(post.title)} />
                     </h4>
 
                     {post.excerpt && (
                       <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-white/45">
-                        {post.excerpt}
+                        <span {...textProps(post.excerpt)} />
                       </p>
                     )}
                   </div>

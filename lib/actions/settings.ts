@@ -6,6 +6,7 @@ import { recordActivity } from "@/lib/activity";
 import { requireSession } from "@/lib/auth";
 import { revalidateContent } from "@/lib/cache";
 import { getDb, settings } from "@/lib/db";
+import { deepSanitize } from "@/lib/rich-text";
 import { settingsFields, settingsKeys, settingsSchemas, type SettingsKey } from "@/lib/settings";
 
 import { attempt, fail, readBoolean, readNumber, readString, succeed, type ActionState } from "./types";
@@ -70,7 +71,7 @@ export async function saveSettingsAction(_prev: ActionState, form: FormData): Pr
     const stored = (existing?.value ?? {}) as Record<string, unknown>;
 
     const candidate = buildValue(key, form, stored);
-    const parsed = settingsSchemas[key].safeParse(candidate);
+    const parsed = settingsSchemas[key].safeParse(deepSanitize(candidate));
     if (!parsed.success) {
       return fail(
         "Please fix the highlighted fields.",

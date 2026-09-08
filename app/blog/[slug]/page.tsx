@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { getPostBySlug, getSettings, siteOrigin } from "@/lib/content";
 import { formatPostDate } from "@/lib/utils";
+import { stripMarkup, textProps } from "@/lib/rich-text-shared";
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -15,14 +16,14 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
   const origin = siteOrigin(settings.seo.canonicalUrl);
   return {
-    title: `${post.title} — ${settings.site.siteName}`,
-    description: post.excerpt || settings.seo.description,
+    title: `${stripMarkup(post.title)} — ${settings.site.siteName}`,
+    description: stripMarkup(post.excerpt) || settings.seo.description,
     alternates: { canonical: `/blog/${post.slug}` },
     robots: settings.seo.indexable ? undefined : { index: false, follow: false },
     openGraph: {
       type: "article",
-      title: post.title,
-      description: post.excerpt,
+      title: stripMarkup(post.title),
+      description: stripMarkup(post.excerpt),
       url: `${origin}/blog/${post.slug}`,
       images: post.coverUrl ? [post.coverUrl] : undefined,
       publishedTime: post.publishedAt ? post.publishedAt.toISOString() : undefined,
@@ -72,11 +73,11 @@ export default async function PostPage({ params }: Params) {
           className="mt-3 text-3xl font-bold leading-tight tracking-tight text-white md:text-5xl"
           style={{ fontFamily: "'Syne', sans-serif" }}
         >
-          {post.title}
+          <span {...textProps(post.title)} />
         </h1>
 
         {post.excerpt && (
-          <p className="mt-5 text-lg leading-relaxed text-white/55">{post.excerpt}</p>
+          <p className="mt-5 text-lg leading-relaxed text-white/55" {...textProps(post.excerpt)} />
         )}
 
         <div
@@ -87,7 +88,7 @@ export default async function PostPage({ params }: Params) {
         {post.coverUrl && (
           <div className="mt-10 overflow-hidden rounded-sm bg-neutral-900">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={post.coverUrl} alt={post.title} className="w-full object-cover" />
+            <img src={post.coverUrl} alt={stripMarkup(post.title)} className="w-full object-cover" />
           </div>
         )}
 

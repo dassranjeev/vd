@@ -16,6 +16,7 @@ import { requireSession } from "@/lib/auth";
 import { getDb, isDatabaseConfigured, videos as videosTable } from "@/lib/db";
 import { VideoThumb } from "@/components/site/VideoThumb";
 import { cn } from "@/lib/utils";
+import { stripMarkup } from "@/lib/rich-text-shared";
 
 export const dynamic = "force-dynamic";
 
@@ -75,7 +76,7 @@ function VideoRow({ video, isFirst, isLast }: { video: Row; isFirst: boolean; is
           href={`/admin/videos/${video.id}`}
           className="block truncate text-sm font-medium text-white/90 transition-colors hover:text-white"
         >
-          {video.title}
+          {stripMarkup(video.title)}
         </Link>
         <p className="mt-0.5 truncate text-xs text-white/35">{meta || video.youtubeId}</p>
       </div>
@@ -118,7 +119,7 @@ function VideoRow({ video, isFirst, isLast }: { video: Row; isFirst: boolean; is
         <form action={deleteVideoAction}>
           <input type="hidden" name="id" value={video.id} />
           <ConfirmSubmit
-            message={`Delete "${video.title}"? This can't be undone.`}
+            message={`Delete "${stripMarkup(video.title)}"? This can't be undone.`}
             title="Delete"
             className="text-white/40 hover:text-red-300"
           >

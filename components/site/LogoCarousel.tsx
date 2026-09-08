@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 import { Editable } from "@/components/editor/Editable";
 import { useEditor } from "@/components/editor/EditorProvider";
 import { sectionConfig, type PublicLogo, type PublicSection } from "@/lib/types";
+import { stripMarkup, textProps } from "@/lib/rich-text-shared";
 
 /**
  * Client logo carousel.
@@ -134,7 +135,7 @@ export function LogoCarousel({
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={logo.imageUrl}
-                  alt={logo.name}
+                  alt={stripMarkup(logo.name)}
                   loading="lazy"
                   className={`h-10 w-auto max-w-[160px] object-contain transition-all duration-500 ${
                     config.grayscale === false
@@ -145,7 +146,7 @@ export function LogoCarousel({
               ) : (
                 // No mark supplied: set the name instead of showing a gap.
                 <span className="whitespace-nowrap text-sm tracking-[0.18em] text-white/40 uppercase transition-colors duration-500 hover:text-white/80">
-                  {logo.name}
+                  <span {...textProps(logo.name)} />
                 </span>
               );
 
@@ -156,7 +157,7 @@ export function LogoCarousel({
                       href={logo.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      title={logo.name}
+                      title={stripMarkup(logo.name)}
                       className="block"
                     >
                       {image}

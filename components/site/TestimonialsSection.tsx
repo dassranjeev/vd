@@ -6,6 +6,7 @@ import { Star } from "lucide-react";
 import { Editable } from "@/components/editor/Editable";
 import { useEditor } from "@/components/editor/EditorProvider";
 import { sectionConfig, type PublicSection, type PublicTestimonial } from "@/lib/types";
+import { textProps } from "@/lib/rich-text-shared";
 
 const COLUMN_CLASSES: Record<number, string> = {
   1: "grid-cols-1 max-w-2xl",
@@ -116,7 +117,7 @@ export function TestimonialsSection({
                   >
                     &ldquo;
                   </span>
-                  {item.quote}
+                  <span {...textProps(item.quote)} />
                 </blockquote>
 
                 <figcaption className="mt-6 flex items-center gap-3 border-t border-white/[0.07] pt-5">

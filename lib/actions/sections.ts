@@ -7,7 +7,7 @@ import { recordActivity } from "@/lib/activity";
 import { requireSession } from "@/lib/auth";
 import { revalidateContent } from "@/lib/cache";
 import { getDb, sections } from "@/lib/db";
-import { sanitizeBodyForStorage } from "@/lib/rich-text";
+import { deepSanitize, sanitizeIfHtml } from "@/lib/rich-text";
 import { SECTION_TYPES, type SectionType } from "@/lib/types";
 import { slugify } from "@/lib/utils";
 
@@ -35,12 +35,12 @@ const configSchema = z.object({
   body: z.string().max(20000).optional(),
 
   /* intro */
-  eyebrow: z.string().max(120).optional(),
-  heading: z.string().max(200).optional(),
+  eyebrow: z.string().max(600).optional(),
+  heading: z.string().max(1200).optional(),
   imageUrl: z.string().max(600).optional(),
   imageSide: z.enum(["left", "right"]).optional(),
   secondColumn: z.enum(["image", "statement", "none"]).optional(),
-  ctaLabel: z.string().max(60).optional(),
+  ctaLabel: z.string().max(400).optional(),
   ctaHref: z.string().max(200).optional(),
 
   /* gallery / logos / posts */
@@ -71,7 +71,7 @@ function readConfig(form: FormData, type: SectionType) {
   if (type === "intro") {
     candidate.eyebrow = readString(form, "config.eyebrow");
     candidate.heading = readString(form, "config.heading");
-    candidate.body = sanitizeBodyForStorage(readString(form, "config.body"));
+    candidate.body = sanitizeIfHtml(readString(form, "config.body"), "block");
     candidate.imageUrl = readString(form, "config.imageUrl");
     candidate.imageSide = readString(form, "config.imageSide", "right");
     candidate.secondColumn = readString(form, "config.secondColumn", "statement");
@@ -100,7 +100,7 @@ function readConfig(form: FormData, type: SectionType) {
   }
 
   if (type === "richtext") {
-    candidate.body = sanitizeBodyForStorage(readString(form, "config.body"));
+    candidate.body = sanitizeIfHtml(readString(form, "config.body"), "block");
   }
 
   const background = readString(form, "config.background");
@@ -112,7 +112,9 @@ function readConfig(form: FormData, type: SectionType) {
   }
 
   const parsed = configSchema.safeParse(candidate);
-  return parsed.success ? parsed.data : {};
+  // `body` was already handled as a block above; this covers the short config
+  // fields (eyebrow, heading, CTA label) with the inline vocabulary.
+  return parsed.success ? deepSanitize(parsed.data) : {};
 }
 export async function createSectionAction(_prev: ActionState, form: FormData): Promise<ActionState> {
   return attempt(async () => {
@@ -140,8 +142,8 @@ export async function createSectionAction(_prev: ActionState, form: FormData): P
       .values({
         key,
         type,
-        title,
-        subtitle: readString(form, "subtitle"),
+        title: sanitizeIfHtml(title, "inline"),
+        subtitle: sanitizeIfHtml(readString(form, "subtitle"), "inline"),
         config: readConfig(form, type),
         position: (row?.value ?? -1) + 1,
         enabled: true,
@@ -178,8 +180,8 @@ export async function updateSectionAction(_prev: ActionState, form: FormData): P
     await db
       .update(sections)
       .set({
-        title: readString(form, "title"),
-        subtitle: readString(form, "subtitle"),
+        title: sanitizeIfHtml(readString(form, "title"), "inline"),
+        subtitle: sanitizeIfHtml(readString(form, "subtitle"), "inline"),
         config: readConfig(form, type),
         updatedAt: raw`now()`,
       })

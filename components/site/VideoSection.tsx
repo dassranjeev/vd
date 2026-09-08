@@ -8,6 +8,7 @@ import { Editable } from "@/components/editor/Editable";
 import { useEditor } from "@/components/editor/EditorProvider";
 import { SortableVideos } from "@/components/editor/SortableVideosLoader";
 import { sectionConfig, type PublicSection, type PublicVideo } from "@/lib/types";
+import { stripMarkup, textProps } from "@/lib/rich-text-shared";
 
 import { VideoMarquee } from "./VideoMarquee";
 import { VideoThumb } from "./VideoThumb";
@@ -60,7 +61,9 @@ function VideoCard({
     <button
       type="button"
       onClick={() => (canEdit ? router.push(`/admin/videos/${video.id}`) : onOpen())}
-      aria-label={canEdit ? `Edit ${video.title}` : `Play ${video.title}`}
+      aria-label={
+        canEdit ? `Edit ${stripMarkup(video.title)}` : `Play ${stripMarkup(video.title)}`
+      }
       className={`group block cursor-pointer text-left transition-transform duration-500 ease-out hover:scale-[1.06] ${
         vertical ? "w-[220px] flex-shrink-0" : "w-full"
       }`}
@@ -74,7 +77,7 @@ function VideoCard({
           youtubeId={video.youtubeId}
           orientation={video.orientation}
           thumbnailUrl={video.thumbnailUrl}
-          alt={video.title}
+          alt={stripMarkup(video.title)}
           className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 group-hover:opacity-100 ${
             vertical ? "opacity-70" : "opacity-75"
           }`}
@@ -100,13 +103,13 @@ function VideoCard({
               className="line-clamp-1 text-sm font-light tracking-wide text-white/90"
               style={{ fontFamily: "'Inter', sans-serif" }}
             >
-              {video.title}
+              <span {...textProps(video.title)} />
             </h4>
             {/* Client only. The year is still recorded in the admin, but it is
                 not shown on the card. */}
             {video.client && (
               <p className="mt-0.5 line-clamp-1 text-[10px] uppercase tracking-[0.18em] text-white/40">
-                {video.client}
+                <span {...textProps(video.client)} />
               </p>
             )}
           </div>

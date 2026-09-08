@@ -320,6 +320,65 @@
   cursor: progress;
 }
 
+/* Wrapper for an inline field, so the HTML toggle can sit against it.
+   `position: relative` on an inline element is still a containing block for an
+   absolutely positioned child, so this does not disturb the text flow. */
+.vd-editable-wrap {
+  position: relative;
+}
+
+/* The "edit as HTML" affordance. Font size is set explicitly because these
+   fields live inside headings, where inheriting would make it enormous. */
+.vd-html-toggle {
+  position: absolute;
+  top: -0.85rem;
+  right: -0.55rem;
+  display: grid;
+  place-items: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 3px;
+  background: #c8a97e;
+  color: #000;
+  font-size: 10px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.vd-editable-wrap:hover .vd-html-toggle,
+.vd-editable-wrap:focus-within .vd-html-toggle {
+  opacity: 1;
+}
+
+/* Floating source panel for inline fields. It is portalled to <body> rather
+   than rendered in place, because a panel inside an <h2> would be invalid
+   nesting and would break the band's layout while open. */
+.vd-source-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+@media (min-width: 640px) {
+  .vd-source-overlay {
+    align-items: center;
+  }
+}
+
+.vd-source-dialog {
+  width: 100%;
+  max-width: 44rem;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
 /* Keep empty fields clickable instead of collapsing to zero width. */
 .vd-editable:empty::before {
   content: attr(data-placeholder);

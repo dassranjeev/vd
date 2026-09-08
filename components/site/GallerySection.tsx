@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { Editable } from "@/components/editor/Editable";
 import { useEditor } from "@/components/editor/EditorProvider";
 import { sectionConfig, type PublicPhoto, type PublicSection } from "@/lib/types";
+import { textProps } from "@/lib/rich-text-shared";
 
 /**
  * Photos and graphics in a masonry grid.
@@ -127,7 +128,7 @@ export function GallerySection({
                 />
                 {config.showCaptions !== false && photo.caption && (
                   <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 pb-3 pt-8 text-left text-[11px] tracking-wide text-white/85">
-                    {photo.caption}
+                    <span {...textProps(photo.caption)} />
                   </span>
                 )}
               </motion.button>

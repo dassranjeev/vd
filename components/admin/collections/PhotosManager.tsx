@@ -7,6 +7,7 @@ import {
 } from "@/lib/actions/collections";
 import type { Photo } from "@/lib/db";
 import { PHOTO_ASPECTS } from "@/lib/types";
+import { stripMarkup } from "@/lib/rich-text-shared";
 
 import { CollectionManager, type CollectionRow } from "../CollectionManager";
 import { ToggleField } from "../form";
@@ -16,7 +17,7 @@ import { Field, Input, Select } from "../ui";
 export function PhotosManager({ photos }: { photos: Photo[] }) {
   const rows: CollectionRow[] = photos.map((photo) => ({
     id: photo.id,
-    title: photo.alt || photo.caption || photo.url.split("/").pop() || "Untitled",
+    title: stripMarkup(photo.alt || photo.caption) || photo.url.split("/").pop() || "Untitled",
     meta: [photo.category, photo.aspect].filter(Boolean).join(" · "),
     thumbnail: photo.url,
     visible: photo.published,

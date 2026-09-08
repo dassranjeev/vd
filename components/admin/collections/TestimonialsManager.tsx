@@ -6,6 +6,7 @@ import {
   toggleTestimonialAction,
 } from "@/lib/actions/collections";
 import type { Testimonial } from "@/lib/db";
+import { stripMarkup } from "@/lib/rich-text-shared";
 
 import { CollectionManager, type CollectionRow } from "../CollectionManager";
 import { ToggleField } from "../form";
@@ -15,7 +16,7 @@ import { Field, Input, Select, Textarea } from "../ui";
 export function TestimonialsManager({ testimonials }: { testimonials: Testimonial[] }) {
   const rows: CollectionRow[] = testimonials.map((item) => ({
     id: item.id,
-    title: item.author,
+    title: stripMarkup(item.author),
     meta: [item.role, item.company].filter(Boolean).join(" · ") || item.quote.slice(0, 70),
     thumbnail: item.avatarUrl,
     visible: item.published,

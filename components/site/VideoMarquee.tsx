@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { PublicVideo } from "@/lib/types";
+import { stripMarkup } from "@/lib/rich-text-shared";
 
 /**
  * The vertical-video reel: auto-scrolling, but also a real scroll container the
@@ -517,7 +518,7 @@ export function VideoMarquee({
               key={video.id}
               type="button"
               onClick={() => scrollToIndex(index)}
-              aria-label={`Go to ${video.title}`}
+              aria-label={`Go to ${stripMarkup(video.title)}`}
               aria-current={index === activeIndex}
               className={`rounded-full transition-all duration-300 ${
                 index === activeIndex

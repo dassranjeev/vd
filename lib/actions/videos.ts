@@ -9,26 +9,30 @@ import { requireSession } from "@/lib/auth";
 import { revalidateContent } from "@/lib/cache";
 import { getDb, videos } from "@/lib/db";
 import { extractYouTubeId, isYouTubeShortsLink } from "@/lib/utils";
+import { deepSanitize } from "@/lib/rich-text";
 import { isDerivedYouTubeThumbnail } from "@/lib/youtube";
 import { resolveBestThumbnail } from "@/lib/youtube-resolve";
 
 import { attempt, fail, readBoolean, readString, succeed, type ActionState } from "./types";
 
+// Every one of these carries editor-written text that the site now renders as
+// markup, so the whole object goes through the allowlist on save. A field with
+// no tag in it is returned byte-identical, so URLs and numbers are untouched.
 const videoInput = z.object({
-  title: z.string().min(1, "A title is required.").max(200),
+  title: z.string().min(1, "A title is required.").max(800),
   youtubeId: z
     .string()
     .min(1, "A YouTube link or ID is required.")
     .regex(/^[a-zA-Z0-9_-]{11}$/, "That doesn't look like a YouTube video ID."),
   orientation: z.enum(["horizontal", "vertical"]),
-  client: z.string().max(160).default(""),
+  client: z.string().max(600).default(""),
   year: z.string().max(20).default(""),
-  role: z.string().max(160).default(""),
+  role: z.string().max(600).default(""),
   description: z.string().max(2000).default(""),
   thumbnailUrl: z.string().max(500).default(""),
   featured: z.boolean().default(false),
   published: z.boolean().default(true),
-});
+}).transform((value) => deepSanitize(value));
 
 function parseForm(form: FormData) {
   return videoInput.safeParse({

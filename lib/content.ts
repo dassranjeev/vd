@@ -5,7 +5,7 @@ import { unstable_cache } from "next/cache";
 
 import { logos, photos, posts, sections, settings, socialLinks, testimonials, tryDb, videos } from "@/lib/db";
 import { seedSections, seedSocialLinks, seedVideos } from "@/lib/db/seed-data";
-import { bodyHtml } from "@/lib/rich-text";
+import { bodyHtml, deepSanitize } from "@/lib/rich-text";
 import { defaultSettings, parseSettings, settingsKeys, type SettingsShape } from "@/lib/settings";
 import type {
   PublicLogo,
@@ -62,12 +62,18 @@ async function loadSettings(): Promise<SettingsShape> {
   try {
     const rows = await db.select().from(settings);
     const byKey = new Map(rows.map((row) => [row.key, row.value]));
-    return Object.fromEntries(
-      settingsKeys.map((key) => [
-        key,
-        byKey.has(key) ? parseSettings(key, byKey.get(key)) : fallback[key],
-      ]),
-    ) as SettingsShape;
+    // Every editable string is sanitized on the way out as well as on save, so
+    // a value stored before HTML was allowed anywhere is still safe by the time
+    // a component renders it. A string with no tag is returned untouched, which
+    // is why this is safe to run over URLs and colours too.
+    return deepSanitize(
+      Object.fromEntries(
+        settingsKeys.map((key) => [
+          key,
+          byKey.has(key) ? parseSettings(key, byKey.get(key)) : fallback[key],
+        ]),
+      ) as SettingsShape,
+    );
   } catch {
     return fallback;
   }
@@ -89,7 +95,8 @@ export const getSettings = unstable_cache(loadSettings, ["vd:settings"], {
  * the sanitizer in their bundle.
  */
 function withRenderedBody(rows: PublicSection[]): PublicSection[] {
-  return rows.map((row) => {
+  return rows.map((raw) => {
+    const row = deepSanitize(raw);
     const config = (row.config ?? {}) as Record<string, unknown>;
     const source = typeof config.body === "string" ? config.body : "";
     if (!source) return row;
@@ -169,7 +176,7 @@ async function loadVideos(): Promise<PublicVideo[]> {
       .from(videos)
       .where(eq(videos.published, true))
       .orderBy(asc(videos.position), asc(videos.createdAt));
-    return rows.length > 0 ? rows : fallbackVideos();
+    return rows.length > 0 ? deepSanitize(rows) : fallbackVideos();
   } catch {
     return fallbackVideos();
   }
@@ -225,7 +232,8 @@ async function loadPhotos(): Promise<PublicPhoto[]> {
       })
       .from(photos)
       .where(eq(photos.published, true))
-      .orderBy(asc(photos.position), asc(photos.createdAt));
+      .orderBy(asc(photos.position), asc(photos.createdAt))
+      .then(deepSanitize);
   } catch {
     return [];
   }
@@ -244,7 +252,8 @@ async function loadLogos(): Promise<PublicLogo[]> {
       .select({ id: logos.id, name: logos.name, imageUrl: logos.imageUrl, url: logos.url })
       .from(logos)
       .where(eq(logos.enabled, true))
-      .orderBy(asc(logos.position), asc(logos.createdAt));
+      .orderBy(asc(logos.position), asc(logos.createdAt))
+      .then(deepSanitize);
   } catch {
     return [];
   }
@@ -271,7 +280,8 @@ async function loadTestimonials(): Promise<PublicTestimonial[]> {
       })
       .from(testimonials)
       .where(eq(testimonials.published, true))
-      .orderBy(asc(testimonials.position), asc(testimonials.createdAt));
+      .orderBy(asc(testimonials.position), asc(testimonials.createdAt))
+      .then(deepSanitize);
   } catch {
     return [];
   }
@@ -304,7 +314,7 @@ async function loadPosts(): Promise<PublicPost[]> {
       .orderBy(desc(posts.publishedAt), asc(posts.position));
     // Dates are serialised so the payload stays safe to hand to client components.
     return rows.map((row) => ({
-      ...row,
+      ...deepSanitize(row),
       publishedAt: row.publishedAt ? row.publishedAt.toISOString() : null,
     }));
   } catch {
@@ -325,7 +335,8 @@ export async function getPostBySlug(slug: string) {
     const [row] = await db.select().from(posts).where(eq(posts.slug, slug)).limit(1);
     if (!row || !row.published) return null;
     // `body` stays the editor's source; `bodyHtml` is what the page renders.
-    return { ...row, bodyHtml: bodyHtml(row.body) };
+    const clean = deepSanitize(row);
+    return { ...clean, bodyHtml: bodyHtml(clean.body) };
   } catch {
     return null;
   }

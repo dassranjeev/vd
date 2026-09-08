@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { getPosts, getSettings, siteOrigin } from "@/lib/content";
 import { formatPostDate } from "@/lib/utils";
+import { stripMarkup, textProps } from "@/lib/rich-text-shared";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { site, seo } = await getSettings();
@@ -55,7 +56,7 @@ export default async function BlogIndex() {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={post.coverUrl}
-                        alt={post.title}
+                        alt={stripMarkup(post.title)}
                         loading="lazy"
                         className="absolute inset-0 h-full w-full object-cover opacity-80 transition-opacity duration-500 group-hover:opacity-100"
                       />
@@ -79,11 +80,11 @@ export default async function BlogIndex() {
                       className="mt-2 text-xl font-semibold text-white/90 transition-colors group-hover:text-white md:text-2xl"
                       style={{ fontFamily: "'Syne', sans-serif" }}
                     >
-                      {post.title}
+                      <span {...textProps(post.title)} />
                     </h2>
 
                     {post.excerpt && (
-                      <p className="mt-2 text-sm leading-relaxed text-white/45">{post.excerpt}</p>
+                      <p className="mt-2 text-sm leading-relaxed text-white/45" {...textProps(post.excerpt)} />
                     )}
                   </div>
                 </Link>

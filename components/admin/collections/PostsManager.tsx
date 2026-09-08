@@ -3,6 +3,7 @@
 import { deletePostAction, savePostAction, togglePostAction } from "@/lib/actions/collections";
 import type { Post } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
+import { stripMarkup } from "@/lib/rich-text-shared";
 
 import { CollectionManager, type CollectionRow } from "../CollectionManager";
 import { ToggleField } from "../form";
@@ -12,7 +13,7 @@ import { Field, Input, Textarea } from "../ui";
 export function PostsManager({ posts }: { posts: Post[] }) {
   const rows: CollectionRow[] = posts.map((post) => ({
     id: post.id,
-    title: post.title,
+    title: stripMarkup(post.title),
     meta: [
       `/blog/${post.slug}`,
       post.publishedAt ? formatDate(post.publishedAt) : "not published",

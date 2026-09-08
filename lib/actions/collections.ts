@@ -7,7 +7,7 @@ import { recordActivity } from "@/lib/activity";
 import { requireSession } from "@/lib/auth";
 import { revalidateContent } from "@/lib/cache";
 import { getDb, logos, photos, posts, testimonials } from "@/lib/db";
-import { sanitizeBodyForStorage } from "@/lib/rich-text";
+import { deepSanitize, sanitizeIfHtml } from "@/lib/rich-text";
 import { slugify } from "@/lib/utils";
 
 import { attempt, fail, readBoolean, readNumber, readString, succeed, type ActionState } from "./types";
@@ -108,14 +108,17 @@ export async function reorderCollectionAction(input: {
 
 /* ────────────────────────── photos ────────────────────────── */
 
+// Every one of these carries editor-written text that the site now renders as
+// markup, so the whole object goes through the allowlist on save. A field with
+// no tag in it is returned byte-identical, so URLs and numbers are untouched.
 const photoInput = z.object({
   url: z.string().min(1, "An image URL is required.").max(600),
   alt: z.string().max(300).default(""),
-  caption: z.string().max(300).default(""),
+  caption: z.string().max(1200).default(""),
   aspect: z.enum(["portrait", "square", "landscape", "tall", "wide"]),
   category: z.string().max(80).default(""),
   published: z.boolean().default(true),
-});
+}).transform((value) => deepSanitize(value));
 
 export async function savePhotoAction(_prev: ActionState, form: FormData): Promise<ActionState> {
   return attempt(async () => {
@@ -174,12 +177,15 @@ export async function togglePhotoAction(form: FormData) {
 
 /* ─────────────────────────── logos ────────────────────────── */
 
+// Every one of these carries editor-written text that the site now renders as
+// markup, so the whole object goes through the allowlist on save. A field with
+// no tag in it is returned byte-identical, so URLs and numbers are untouched.
 const logoInput = z.object({
-  name: z.string().min(1, "A client name is required.").max(120),
+  name: z.string().min(1, "A client name is required.").max(600),
   imageUrl: z.string().max(600).default(""),
   url: z.string().max(600).default(""),
   enabled: z.boolean().default(true),
-});
+}).transform((value) => deepSanitize(value));
 
 export async function saveLogoAction(_prev: ActionState, form: FormData): Promise<ActionState> {
   return attempt(async () => {
@@ -236,16 +242,19 @@ export async function toggleLogoAction(form: FormData) {
 
 /* ───────────────────────── testimonials ───────────────────── */
 
+// Every one of these carries editor-written text that the site now renders as
+// markup, so the whole object goes through the allowlist on save. A field with
+// no tag in it is returned byte-identical, so URLs and numbers are untouched.
 const testimonialInput = z.object({
-  quote: z.string().min(1, "The quote is required.").max(1200),
-  author: z.string().min(1, "Who said it?").max(120),
-  role: z.string().max(120).default(""),
-  company: z.string().max(120).default(""),
+  quote: z.string().min(1, "The quote is required.").max(4000),
+  author: z.string().min(1, "Who said it?").max(600),
+  role: z.string().max(600).default(""),
+  company: z.string().max(600).default(""),
   avatarUrl: z.string().max(600).default(""),
   rating: z.number().int().min(0).max(5),
   featured: z.boolean().default(false),
   published: z.boolean().default(true),
-});
+}).transform((value) => deepSanitize(value));
 
 export async function saveTestimonialAction(_prev: ActionState, form: FormData): Promise<ActionState> {
   return attempt(async () => {
@@ -309,14 +318,17 @@ export async function toggleTestimonialAction(form: FormData) {
 
 /* ────────────────────────── blog posts ────────────────────── */
 
+// Every one of these carries editor-written text that the site now renders as
+// markup, so the whole object goes through the allowlist on save. A field with
+// no tag in it is returned byte-identical, so URLs and numbers are untouched.
 const postInput = z.object({
-  title: z.string().min(1, "A title is required.").max(200),
-  excerpt: z.string().max(600).default(""),
-  body: z.string().max(40000).default("").transform(sanitizeBodyForStorage),
+  title: z.string().min(1, "A title is required.").max(800),
+  excerpt: z.string().max(2000).default(""),
+  body: z.string().max(40000).default("").transform((v) => sanitizeIfHtml(v, "block")),
   coverUrl: z.string().max(600).default(""),
   tags: z.string().max(300).default(""),
   published: z.boolean().default(false),
-});
+}).transform((value) => deepSanitize(value));
 
 /** Rough reading time, so editors do not have to guess. */
 function readingMinutes(body: string) {

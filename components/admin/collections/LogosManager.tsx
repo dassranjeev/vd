@@ -2,6 +2,7 @@
 
 import { deleteLogoAction, saveLogoAction, toggleLogoAction } from "@/lib/actions/collections";
 import type { Logo } from "@/lib/db";
+import { stripMarkup } from "@/lib/rich-text-shared";
 
 import { CollectionManager, type CollectionRow } from "../CollectionManager";
 import { ToggleField } from "../form";
@@ -11,7 +12,7 @@ import { Field, Input } from "../ui";
 export function LogosManager({ logos }: { logos: Logo[] }) {
   const rows: CollectionRow[] = logos.map((logo) => ({
     id: logo.id,
-    title: logo.name,
+    title: stripMarkup(logo.name),
     meta: logo.url || (logo.imageUrl ? "" : "No mark — the name will be set as type"),
     thumbnail: logo.imageUrl,
     visible: logo.enabled,
