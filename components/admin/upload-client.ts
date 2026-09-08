@@ -3,6 +3,7 @@
 import { upload } from "@vercel/blob/client";
 
 import { recordUploadedMediaAction } from "@/lib/actions/media";
+import { MEDIA_PREFIX, proxyUrlFor } from "@/lib/blob-proxy";
 
 /**
  * Uploads a file straight from the browser to Vercel Blob, then records it in
@@ -19,8 +20,10 @@ export async function uploadToBlob(
   onProgress?: (percentage: number) => void,
 ): Promise<UploadResult> {
   try {
-    const blob = await upload(`media/${file.name}`, file, {
-      access: "public",
+    const blob = await upload(`${MEDIA_PREFIX}${file.name}`, file, {
+      // The store is private, so this is the only access it accepts. The bytes
+      // reach visitors through /api/media/** instead of straight from the CDN.
+      access: "private",
       handleUploadUrl: "/api/admin/upload",
       // Large files are split into parts, so a dropped chunk doesn't restart
       // the whole transfer.
@@ -30,8 +33,15 @@ export async function uploadToBlob(
         : undefined,
     });
 
+    // What every consumer stores and renders is the proxy URL: a private blob
+    // URL 403s for visitors, so it is useless in an <img src>.
+    const url = proxyUrlFor(blob.pathname);
+    if (!url) {
+      return { ok: false, error: "That upload landed outside the media folder." };
+    }
+
     const recorded = await recordUploadedMediaAction({
-      url: blob.url,
+      url,
       pathname: blob.pathname,
       filename: file.name,
       contentType: file.type || blob.contentType || "",
@@ -40,10 +50,8 @@ export async function uploadToBlob(
 
     // The bytes are safely stored even if the library row fails, so surface the
     // URL rather than losing the upload.
-    if (!recorded.ok) {
-      return { ok: true, url: blob.url };
-    }
-    return { ok: true, url: blob.url };
+    if (!recorded.ok) return { ok: true, url };
+    return { ok: true, url };
   } catch (error) {
     const raw = error instanceof Error ? error.message : String(error);
 

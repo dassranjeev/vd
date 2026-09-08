@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { recordActivity } from "@/lib/activity";
 import { requireSession } from "@/lib/auth";
 import { revalidateContent } from "@/lib/cache";
+import { isProxyUrl, pathnameFromProxyUrl } from "@/lib/blob-proxy";
 import { getDb, media } from "@/lib/db";
 
 import { attempt, fail, readString, succeed, type ActionState } from "./types";
@@ -69,7 +70,10 @@ export async function deleteMediaAction(form: FormData) {
   if (removed?.source === "blob" && process.env.BLOB_READ_WRITE_TOKEN) {
     try {
       const { del } = await import("@vercel/blob");
-      await del(removed.url);
+      // Delete by pathname: `url` is now a proxy path, not a blob URL. Older
+      // rows stored the blob URL itself, which del also accepts.
+      const target = removed.pathname || pathnameFromProxyUrl(removed.url) || removed.url;
+      await del(target);
     } catch {
       // The library entry is removed either way.
     }
@@ -101,8 +105,9 @@ export async function recordUploadedMediaAction(input: {
   return attempt(async () => {
     const session = await requireSession();
 
-    if (!/^https:\/\/[a-z0-9-]+\.public\.blob\.vercel-storage\.com\//i.test(input.url)) {
-      return fail("That does not look like a Blob URL.");
+    // Uploads are recorded by their proxy URL, which is what the site renders.
+    if (!isProxyUrl(input.url)) {
+      return fail("That does not look like an uploaded media URL.");
     }
 
     await getDb().insert(media).values({
