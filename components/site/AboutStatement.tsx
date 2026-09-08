@@ -56,7 +56,7 @@ export function AboutStatement({
         <div className={panel ? "space-y-1" : "mb-6 space-y-0.5"}>
           {about.lines.map((line, index) => (
             <motion.p
-              key={`${line.plain}-${index}`}
+              key={index}
               initial={{ opacity: 0, y: 14 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -83,7 +83,11 @@ export function AboutStatement({
                   placeholder="emphasis"
                 />
               </em>
-              {line.suffix}
+              <Editable
+                value={line.suffix}
+                target={{ kind: "setting", group: "about", path: `lines.${index}.suffix` }}
+                placeholder="."
+              />
             </motion.p>
           ))}
         </div>

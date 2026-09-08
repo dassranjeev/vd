@@ -50,7 +50,11 @@ export function Contact({
           <a href={`mailto:${contact.email}`} className="group relative mt-12 inline-block">
             <div className="relative z-10 overflow-hidden rounded-full border border-white/20 px-6 py-4 text-xs font-medium uppercase tracking-wide text-white/80 md:tracking-widest md:text-sm">
               <span className="relative z-20 transition-colors duration-500 group-hover:text-black">
-                {contact.email}
+                <Editable
+                  value={contact.email}
+                  target={{ kind: "setting", group: "contact", path: "email" }}
+                  placeholder="you@example.com"
+                />
               </span>
               <div className="absolute inset-0 translate-y-[101%] bg-white transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-y-0" />
             </div>

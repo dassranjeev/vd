@@ -8,7 +8,8 @@ import { Editable } from "@/components/editor/Editable";
 import { useEditor } from "@/components/editor/EditorProvider";
 import { sectionConfig, type PublicPost, type PublicSection } from "@/lib/types";
 import { formatPostDate } from "@/lib/utils";
-import { stripMarkup, textProps } from "@/lib/rich-text-shared";
+import { stripMarkup } from "@/lib/rich-text-shared";
+import { EditableText } from "@/components/editor/EditableText";
 
 const COLUMN_CLASSES: Record<number, string> = {
   1: "grid-cols-1",
@@ -125,12 +126,24 @@ export function PostsSection({
                       className="mt-2 text-lg font-semibold leading-snug text-white/90 transition-colors group-hover:text-white"
                       style={{ fontFamily: "'Syne', sans-serif" }}
                     >
-                      <span {...textProps(post.title)} />
+                      <EditableText
+                        entity="post"
+                        id={post.id}
+                        field="title"
+                        value={post.title}
+                        placeholder="Post title"
+                      />
                     </h4>
 
                     {post.excerpt && (
                       <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-white/45">
-                        <span {...textProps(post.excerpt)} />
+                        <EditableText
+                          entity="post"
+                          id={post.id}
+                          field="excerpt"
+                          value={post.excerpt}
+                          placeholder="Excerpt"
+                        />
                       </p>
                     )}
                   </div>

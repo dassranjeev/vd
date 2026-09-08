@@ -5,7 +5,8 @@ import { useEffect, useRef } from "react";
 import { Editable } from "@/components/editor/Editable";
 import { useEditor } from "@/components/editor/EditorProvider";
 import { sectionConfig, type PublicLogo, type PublicSection } from "@/lib/types";
-import { stripMarkup, textProps } from "@/lib/rich-text-shared";
+import { stripMarkup } from "@/lib/rich-text-shared";
+import { EditableText } from "@/components/editor/EditableText";
 
 /**
  * Client logo carousel.
@@ -146,7 +147,13 @@ export function LogoCarousel({
               ) : (
                 // No mark supplied: set the name instead of showing a gap.
                 <span className="whitespace-nowrap text-sm tracking-[0.18em] text-white/40 uppercase transition-colors duration-500 hover:text-white/80">
-                  <span {...textProps(logo.name)} />
+                  <EditableText
+                    entity="logo"
+                    id={logo.id}
+                    field="name"
+                    value={logo.name}
+                    placeholder="Client name"
+                  />
                 </span>
               );
 

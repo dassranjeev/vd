@@ -35,7 +35,7 @@ export function RichTextSection({ section }: { section: PublicSection }) {
 
         {section.id ? (
           <HtmlEditable
-            sectionId={section.id}
+            target={{ kind: "section", id: section.id, field: "body" }}
             source={bodySource}
             html={bodyMarkup}
             placeholder="Add copy for this band. Blank lines make paragraphs."

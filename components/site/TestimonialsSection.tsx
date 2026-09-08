@@ -6,7 +6,7 @@ import { Star } from "lucide-react";
 import { Editable } from "@/components/editor/Editable";
 import { useEditor } from "@/components/editor/EditorProvider";
 import { sectionConfig, type PublicSection, type PublicTestimonial } from "@/lib/types";
-import { textProps } from "@/lib/rich-text-shared";
+import { EditableText } from "@/components/editor/EditableText";
 
 const COLUMN_CLASSES: Record<number, string> = {
   1: "grid-cols-1 max-w-2xl",
@@ -117,7 +117,13 @@ export function TestimonialsSection({
                   >
                     &ldquo;
                   </span>
-                  <span {...textProps(item.quote)} />
+                  <EditableText
+                    entity="testimonial"
+                    id={item.id}
+                    field="quote"
+                    value={item.quote}
+                    placeholder="What they said"
+                  />
                 </blockquote>
 
                 <figcaption className="mt-6 flex items-center gap-3 border-t border-white/[0.07] pt-5">
@@ -135,10 +141,34 @@ export function TestimonialsSection({
                     </span>
                   )}
                   <span className="min-w-0">
-                    <span className="block truncate text-sm text-white/85">{item.author}</span>
-                    {(item.role || item.company) && (
+                    <span className="block truncate text-sm text-white/85">
+                      <EditableText
+                        entity="testimonial"
+                        id={item.id}
+                        field="author"
+                        value={item.author}
+                        placeholder="Name"
+                      />
+                    </span>
+                    {(editing || item.role || item.company) && (
                       <span className="block truncate text-[11px] uppercase tracking-[0.14em] text-white/35">
-                        {[item.role, item.company].filter(Boolean).join(" · ")}
+                        <EditableText
+                          entity="testimonial"
+                          id={item.id}
+                          field="role"
+                          value={item.role}
+                          placeholder="Role"
+                        />
+                        {(editing || (item.role && item.company)) && (
+                          <span className="mx-1.5 text-white/20">·</span>
+                        )}
+                        <EditableText
+                          entity="testimonial"
+                          id={item.id}
+                          field="company"
+                          value={item.company}
+                          placeholder="Company"
+                        />
                       </span>
                     )}
                   </span>

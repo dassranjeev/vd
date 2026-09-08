@@ -5,7 +5,17 @@ import { eq, sql as raw } from "drizzle-orm";
 import { recordActivity } from "@/lib/activity";
 import { requireSession } from "@/lib/auth";
 import { revalidateContent } from "@/lib/cache";
-import { getDb, sections, settings } from "@/lib/db";
+import {
+  getDb,
+  logos,
+  photos,
+  posts,
+  sections,
+  settings,
+  socialLinks,
+  testimonials,
+  videos,
+} from "@/lib/db";
 import { setPath, type PatchValue } from "@/lib/patch-path";
 import { deepSanitize, sanitizeIfHtml } from "@/lib/rich-text";
 import { settingsKeys, settingsSchemas, type SettingsKey } from "@/lib/settings";
@@ -129,6 +139,89 @@ export async function patchSectionTextAction(input: {
       summary: `inline edit ${field}`,
     });
     revalidateContent("sections");
+    return succeed("Saved");
+  });
+}
+
+/* ─────────────────── collection rows ─────────────────── */
+
+/**
+ * Display text on a collection row, editable from the page it appears on.
+ *
+ * Sections and settings are edited through their own actions above; these are
+ * the rows behind the video grid, gallery, logo band, testimonials and journal
+ * cards. Only text that is actually rendered is listed — a URL or an image path
+ * is not display copy and stays in the admin panel, where a broken value is
+ * obvious rather than invisible.
+ *
+ * `touch` says whether the table carries an `updatedAt` to bump; logos and
+ * social links do not have one.
+ */
+const COLLECTIONS = {
+  video: { table: videos, tag: "videos", touch: true, fields: ["title", "client", "role", "year"] },
+  photo: { table: photos, tag: "photos", touch: true, fields: ["caption", "alt"] },
+  logo: { table: logos, tag: "logos", touch: false, fields: ["name"] },
+  testimonial: {
+    table: testimonials,
+    tag: "testimonials",
+    touch: true,
+    fields: ["quote", "author", "role", "company"],
+  },
+  post: { table: posts, tag: "posts", touch: true, fields: ["title", "excerpt", "body"] },
+  social: { table: socialLinks, tag: "social", touch: false, fields: ["label"] },
+} as const;
+
+export type CollectionEntity = keyof typeof COLLECTIONS;
+
+/** Prose-length allowance for the one field that is a paragraph, not a label. */
+const COLLECTION_MAX: Record<string, number> = { quote: 4000, excerpt: 2000, body: 40000 };
+
+/** Inline edit for a single piece of text on a collection row. */
+export async function patchCollectionTextAction(input: {
+  entity: string;
+  id: string;
+  field: string;
+  value: string;
+}): Promise<ActionState> {
+  return attempt(async () => {
+    const session = await requireSession();
+
+    const spec = COLLECTIONS[input.entity as CollectionEntity];
+    if (!spec) return fail(`"${input.entity}" is not an editable collection.`);
+    if (!(spec.fields as readonly string[]).includes(input.field)) {
+      return fail(`"${input.field}" is not editable on a ${input.entity}.`);
+    }
+
+    // Sanitize after truncating: a cut through the middle of a tag leaves
+    // markup the allowlist then discards, rather than storing it broken.
+    const truncated = input.value.slice(0, COLLECTION_MAX[input.field] ?? 1000);
+    // A post body is a document; everything else renders inside existing markup.
+    const value = sanitizeIfHtml(truncated, input.field === "body" ? "block" : "inline");
+
+    const payload: Record<string, unknown> = { [input.field]: value };
+    if (spec.touch) payload.updatedAt = raw`now()`;
+
+    // The table is picked at runtime, so drizzle narrows `.set()` to the columns
+    // every table in COLLECTIONS has in common — which is almost none of them.
+    // The casts are contained here; what actually guarantees safety is that both
+    // the entity and the field name were checked against the allowlist above.
+    const table = spec.table as typeof videos;
+    const db = getDb();
+    const updated = await db
+      .update(table)
+      .set(payload as unknown as Partial<typeof videos.$inferInsert>)
+      .where(eq(table.id, input.id))
+      .returning({ id: table.id });
+
+    if (updated.length === 0) return fail("That item no longer exists.");
+
+    await recordActivity(session, {
+      action: "updated",
+      entity: input.entity,
+      entityId: input.id,
+      summary: `inline edit ${input.field}`,
+    });
+    revalidateContent(spec.tag);
     return succeed("Saved");
   });
 }

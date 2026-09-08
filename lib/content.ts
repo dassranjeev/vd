@@ -196,17 +196,17 @@ export async function getVideosByOrientation(orientation: string) {
 
 async function loadSocialLinks(): Promise<PublicSocialLink[]> {
   const db = tryDb();
-  if (!db) return seedSocialLinks.map((link) => ({ ...link }));
+  if (!db) return seedSocialLinks.map((link) => ({ id: "", ...link }));
 
   try {
     const rows = await db
-      .select({ label: socialLinks.label, url: socialLinks.url })
+      .select({ id: socialLinks.id, label: socialLinks.label, url: socialLinks.url })
       .from(socialLinks)
       .where(eq(socialLinks.enabled, true))
       .orderBy(asc(socialLinks.position));
-    return rows.length > 0 ? rows : seedSocialLinks.map((link) => ({ ...link }));
+    return rows.length > 0 ? deepSanitize(rows) : seedSocialLinks.map((link) => ({ id: "", ...link }));
   } catch {
-    return seedSocialLinks.map((link) => ({ ...link }));
+    return seedSocialLinks.map((link) => ({ id: "", ...link }));
   }
 }
 

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Editable } from "@/components/editor/Editable";
 import { useEditor } from "@/components/editor/EditorProvider";
 import { SortableVideos } from "@/components/editor/SortableVideosLoader";
+import { EditableText } from "@/components/editor/EditableText";
 import { sectionConfig, type PublicSection, type PublicVideo } from "@/lib/types";
 import { stripMarkup, textProps } from "@/lib/rich-text-shared";
 
@@ -58,13 +59,15 @@ function VideoCard({
   const canEdit = editing && isRealId(video.id);
 
   return (
-    <button
-      type="button"
-      onClick={() => (canEdit ? router.push(`/admin/videos/${video.id}`) : onOpen())}
-      aria-label={
-        canEdit ? `Edit ${stripMarkup(video.title)}` : `Play ${stripMarkup(video.title)}`
-      }
-      className={`group block cursor-pointer text-left transition-transform duration-500 ease-out hover:scale-[1.06] ${
+    /* A div, not a button.
+       The card used to be one big <button>, which meant the title and client
+       could not be edited in place: a contenteditable (or any control) nested
+       inside a button is invalid, and the click would fire the card instead of
+       placing a caret. So the click target is now an overlay that covers the
+       artwork, and the caption sits above it in the stacking order where it can
+       be edited directly. */
+    <div
+      className={`group block text-left transition-transform duration-500 ease-out hover:scale-[1.06] ${
         vertical ? "w-[220px] flex-shrink-0" : "w-full"
       }`}
     >
@@ -83,39 +86,63 @@ function VideoCard({
           }`}
         />
 
-        {canEdit ? (
-          <span className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-black/70 px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-white backdrop-blur-sm">
-              <Pencil className="size-3" />
-              Edit
+        <button
+          type="button"
+          onClick={() => (canEdit ? router.push(`/admin/videos/${video.id}`) : onOpen())}
+          aria-label={
+            canEdit ? `Edit ${stripMarkup(video.title)}` : `Play ${stripMarkup(video.title)}`
+          }
+          className="absolute inset-0 z-10 cursor-pointer"
+        >
+          {canEdit ? (
+            <span className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-black/70 px-3 py-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-white backdrop-blur-sm">
+                <Pencil className="size-3" />
+                Edit
+              </span>
             </span>
-          </span>
-        ) : (
-          <PlayBadge size={vertical ? "sm" : "md"} />
-        )}
+          ) : (
+            <PlayBadge size={vertical ? "sm" : "md"} />
+          )}
+        </button>
 
-        <div className="absolute inset-x-0 bottom-0">
+        {/* Above the click overlay, so the caption stays editable. */}
+        <div className="absolute inset-x-0 bottom-0 z-20">
           <div
-            className={`bg-gradient-to-t from-black/60 to-transparent ${vertical ? "h-10" : "h-8"}`}
+            className={`pointer-events-none bg-gradient-to-t from-black/60 to-transparent ${
+              vertical ? "h-10" : "h-8"
+            }`}
           />
           <div className={`px-3 py-2 backdrop-blur-sm ${vertical ? "bg-black/50" : "bg-black/40"}`}>
             <h4
               className="line-clamp-1 text-sm font-light tracking-wide text-white/90"
               style={{ fontFamily: "'Inter', sans-serif" }}
             >
-              <span {...textProps(video.title)} />
+              <EditableText
+                entity="video"
+                id={video.id}
+                field="title"
+                value={video.title}
+                placeholder="Video title"
+              />
             </h4>
             {/* Client only. The year is still recorded in the admin, but it is
                 not shown on the card. */}
-            {video.client && (
+            {(editing || video.client) && (
               <p className="mt-0.5 line-clamp-1 text-[10px] uppercase tracking-[0.18em] text-white/40">
-                <span {...textProps(video.client)} />
+                <EditableText
+                  entity="video"
+                  id={video.id}
+                  field="client"
+                  value={video.client}
+                  placeholder="Client"
+                />
               </p>
             )}
           </div>
         </div>
       </div>
-    </button>
+    </div>
   );
 }
 

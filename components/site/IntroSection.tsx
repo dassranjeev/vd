@@ -109,7 +109,7 @@ export function IntroSection({
           {section.id ? (
             <div className="mt-7">
               <HtmlEditable
-                sectionId={section.id}
+                target={{ kind: "section", id: section.id, field: "body" }}
                 source={bodySource}
                 html={bodyMarkup}
                 placeholder="Tell the story. Leave a blank line between paragraphs."

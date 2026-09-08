@@ -7,7 +7,8 @@ import { useEffect, useState } from "react";
 import { Editable } from "@/components/editor/Editable";
 import { useEditor } from "@/components/editor/EditorProvider";
 import { sectionConfig, type PublicPhoto, type PublicSection } from "@/lib/types";
-import { textProps } from "@/lib/rich-text-shared";
+import { stripMarkup } from "@/lib/rich-text-shared";
+import { EditableText } from "@/components/editor/EditableText";
 
 /**
  * Photos and graphics in a masonry grid.
@@ -106,10 +107,11 @@ export function GallerySection({
         ) : (
           <div className={`mx-auto grid max-w-[1100px] auto-rows-[minmax(0,1fr)] gap-3 ${columns}`}>
             {photos.map((photo, index) => (
-              <motion.button
+              /* A div wrapping an overlay button, not one big button: the
+                 caption has to be editable in place, and a control nested
+                 inside a button is invalid markup that swallows the click. */
+              <motion.div
                 key={photo.id}
-                type="button"
-                onClick={() => setLightbox(photo)}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-40px" }}
@@ -117,7 +119,6 @@ export function GallerySection({
                 className={`group relative overflow-hidden rounded-sm bg-neutral-900 ${
                   ROW_SPAN[photo.aspect] ?? ROW_SPAN.portrait
                 }`}
-                aria-label={photo.alt || photo.caption || "Open photo"}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -126,12 +127,24 @@ export function GallerySection({
                   loading="lazy"
                   className="absolute inset-0 h-full w-full object-cover opacity-80 transition-all duration-500 group-hover:scale-[1.04] group-hover:opacity-100"
                 />
-                {config.showCaptions !== false && photo.caption && (
-                  <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 pb-3 pt-8 text-left text-[11px] tracking-wide text-white/85">
-                    <span {...textProps(photo.caption)} />
+                <button
+                  type="button"
+                  onClick={() => setLightbox(photo)}
+                  aria-label={stripMarkup(photo.alt || photo.caption) || "Open photo"}
+                  className="absolute inset-0 z-10 cursor-zoom-in"
+                />
+                {config.showCaptions !== false && (editing || photo.caption) && (
+                  <span className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/80 to-transparent px-3 pb-3 pt-8 text-left text-[11px] tracking-wide text-white/85">
+                    <EditableText
+                      entity="photo"
+                      id={photo.id}
+                      field="caption"
+                      value={photo.caption}
+                      placeholder="Caption"
+                    />
                   </span>
                 )}
-              </motion.button>
+              </motion.div>
             ))}
           </div>
         )}

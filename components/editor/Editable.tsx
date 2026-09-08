@@ -4,12 +4,19 @@ import { Code2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { patchSectionTextAction, patchSettingAction } from "@/lib/actions/inline";
+import {
+  patchCollectionTextAction,
+  patchSectionTextAction,
+  patchSettingAction,
+} from "@/lib/actions/inline";
 import { hasInlineMarkup } from "@/lib/rich-text-shared";
 import { cn } from "@/lib/utils";
 
 import { useEditor } from "./EditorProvider";
 import { HtmlSourcePanel } from "./HtmlSourcePanel";
+
+/** A collection whose rows carry editable display text. */
+export type EditEntity = "video" | "photo" | "logo" | "testimonial" | "post" | "social";
 
 /** Where an edited string is persisted. */
 export type EditTarget =
@@ -19,12 +26,30 @@ export type EditTarget =
       id: string;
       /** Mirrors SECTION_TEXT_FIELDS in lib/actions/inline.ts. */
       field: "title" | "subtitle" | "body" | "eyebrow" | "heading" | "ctaLabel" | "ctaHref" | "imageUrl";
+    }
+  | {
+      kind: "collection";
+      /** Mirrors COLLECTIONS in lib/actions/inline.ts. */
+      entity: EditEntity;
+      id: string;
+      field: string;
     };
 
-function persist(target: EditTarget, value: string) {
-  return target.kind === "setting"
-    ? patchSettingAction({ group: target.group, path: target.path, value })
-    : patchSectionTextAction({ id: target.id, field: target.field, value });
+/** Route a value to whichever action owns it. Shared with HtmlEditable. */
+export function persistTarget(target: EditTarget, value: string) {
+  switch (target.kind) {
+    case "setting":
+      return patchSettingAction({ group: target.group, path: target.path, value });
+    case "section":
+      return patchSectionTextAction({ id: target.id, field: target.field, value });
+    case "collection":
+      return patchCollectionTextAction({
+        entity: target.entity,
+        id: target.id,
+        field: target.field,
+        value,
+      });
+  }
 }
 
 function describe(target: EditTarget) {
@@ -32,16 +57,14 @@ function describe(target: EditTarget) {
 }
 
 /**
- * Whitespace that collapses in HTML — everything except a non-breaking space.
+ * Whitespace to collapse: newlines and tabs, but not spaces of either kind.
  *
- * `contentEditable` inserts U+00A0 for the second of two typed spaces, which is
- * exactly what makes a deliberate gap survive. The old code normalised those
- * back to plain spaces and then collapsed every run, which is why typing extra
- * space in a heading appeared to do nothing at all. Keeping U+00A0 while
- * collapsing real whitespace means a typed gap persists and a stray newline
- * still does not.
+ * `contentEditable` inserts U+00A0 for the second of two typed spaces, which
+ * is what lets a deliberate gap survive, so it has to be excluded. Written as
+ * an escape on purpose: `\s` matches U+00A0, so this class must name it, and a
+ * literal non-breaking space here would be invisible to the next reader.
  */
-const COLLAPSIBLE = /[^\S ]+/g;
+const COLLAPSIBLE = /[^\S \u00A0]+/g;
 
 /**
  * Inline-editable text.
@@ -103,7 +126,7 @@ export function Editable({
   /** Save a value that came from the source panel. */
   async function saveSource(next: string) {
     setBusy(true);
-    const ok = await run(() => persist(target, next));
+    const ok = await run(() => persistTarget(target, next));
     setBusy(false);
     if (!ok) return;
     setText(next);
@@ -118,7 +141,11 @@ export function Editable({
     const node = ref.current;
     if (!node) return;
 
-    const next = (node.textContent ?? "").replace(COLLAPSIBLE, " ").trim();
+    // Not trimmed. A leading or trailing space is real content when the value
+    // renders next to another inline element — the About statement is literally
+    // "What's the " + <em>story?</em> + ".", and trimming was why that section
+    // refused to keep the space before the italic word.
+    const next = (node.textContent ?? "").replace(COLLAPSIBLE, " ");
 
     if (!dirty.current || next === text) {
       dirty.current = false;
@@ -126,7 +153,7 @@ export function Editable({
     }
 
     setBusy(true);
-    const ok = await run(() => persist(target, next));
+    const ok = await run(() => persistTarget(target, next));
     setBusy(false);
 
     if (ok) {
@@ -167,6 +194,7 @@ export function Editable({
     <button
       type="button"
       onClick={(event) => {
+        event.preventDefault();
         event.stopPropagation();
         setSourceOpen(true);
       }}
@@ -186,6 +214,7 @@ export function Editable({
           role="button"
           tabIndex={0}
           onClick={(event) => {
+            event.preventDefault();
             event.stopPropagation();
             setSourceOpen(true);
           }}
@@ -236,8 +265,14 @@ export function Editable({
           }
         }}
         onBlur={commit}
-        // Clicking editable copy shouldn't trigger a surrounding link or lightbox.
-        onClick={(event) => event.stopPropagation()}
+        // Clicking editable copy shouldn't trigger a surrounding link, card or
+        // lightbox. preventDefault matters as well as stopPropagation: these
+        // fields sit inside <a> and <button>, whose activation behaviour is not
+        // cancelled by stopping propagation alone.
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        }}
       >
         {text}
       </span>

@@ -3,8 +3,8 @@
 import { Code2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { patchSectionTextAction } from "@/lib/actions/inline";
 
+import { persistTarget, type EditTarget } from "./Editable";
 import { useEditor } from "./EditorProvider";
 import { HtmlSourcePanel } from "./HtmlSourcePanel";
 
@@ -23,13 +23,14 @@ import { HtmlSourcePanel } from "./HtmlSourcePanel";
  * `lib/content.ts`. Visitors only ever see `html`.
  */
 export function HtmlEditable({
-  sectionId,
+  target,
   source,
   html,
   className,
   placeholder = "Add copy for this section.",
 }: {
-  sectionId: string;
+  /** A section's `body`, or a collection row's — a blog post's, say. */
+  target: EditTarget;
   source: string;
   html: string;
   className?: string;
@@ -52,9 +53,7 @@ export function HtmlEditable({
 
   async function save(value: string) {
     setBusy(true);
-    const ok = await run(() =>
-      patchSectionTextAction({ id: sectionId, field: "body", value }),
-    );
+    const ok = await run(() => persistTarget(target, value));
     setBusy(false);
     if (!ok) return;
     setOpen(false);

@@ -3,7 +3,10 @@ import Link from "next/link";
 
 import { getPosts, getSettings, siteOrigin } from "@/lib/content";
 import { formatPostDate } from "@/lib/utils";
-import { stripMarkup, textProps } from "@/lib/rich-text-shared";
+import { AdminBar } from "@/components/editor/AdminBar";
+import { EditableText } from "@/components/editor/EditableText";
+import { EditorProvider } from "@/components/editor/EditorProvider";
+import { stripMarkup } from "@/lib/rich-text-shared";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { site, seo } = await getSettings();
@@ -23,7 +26,13 @@ export default async function BlogIndex() {
   const [posts, settings] = await Promise.all([getPosts(), getSettings()]);
 
   return (
-    <main className="min-h-screen bg-background px-6 py-24 md:px-12 md:py-32">
+    <EditorProvider>
+      <AdminBar />
+      <main
+        className="min-h-screen bg-background px-6 py-24 md:px-12 md:py-32"
+        // Leaves room for the admin bar; 0px for visitors.
+        style={{ paddingTop: "var(--vd-adminbar, 0px)" }}
+      >
       <div className="mx-auto max-w-[900px]">
         <Link
           href="/"
@@ -80,19 +89,32 @@ export default async function BlogIndex() {
                       className="mt-2 text-xl font-semibold text-white/90 transition-colors group-hover:text-white md:text-2xl"
                       style={{ fontFamily: "'Syne', sans-serif" }}
                     >
-                      <span {...textProps(post.title)} />
+                      <EditableText
+                        entity="post"
+                        id={post.id}
+                        field="title"
+                        value={post.title}
+                        placeholder="Post title"
+                      />
                     </h2>
 
-                    {post.excerpt && (
-                      <p className="mt-2 text-sm leading-relaxed text-white/45" {...textProps(post.excerpt)} />
-                    )}
+                    <p className="mt-2 text-sm leading-relaxed text-white/45">
+                      <EditableText
+                        entity="post"
+                        id={post.id}
+                        field="excerpt"
+                        value={post.excerpt}
+                        placeholder="Excerpt"
+                      />
+                    </p>
                   </div>
                 </Link>
               </li>
             ))}
           </ul>
         )}
-      </div>
-    </main>
+        </div>
+      </main>
+    </EditorProvider>
   );
 }

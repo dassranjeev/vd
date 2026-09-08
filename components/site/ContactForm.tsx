@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Editable } from "@/components/editor/Editable";
 
 type Status = { kind: "idle" | "sending" | "sent" | "error"; message?: string };
 
@@ -47,11 +48,13 @@ export function ContactForm({ heading }: { heading: string }) {
 
   return (
     <form onSubmit={onSubmit} className="mx-auto mt-14 max-w-lg text-left">
-      {heading && (
-        <p className="mb-5 text-center text-[10px] uppercase tracking-[0.28em] text-white/35">
-          {heading}
-        </p>
-      )}
+      <p className="mb-5 text-center text-[10px] uppercase tracking-[0.28em] text-white/35">
+        <Editable
+          value={heading}
+          target={{ kind: "setting", group: "contact", path: "formHeading" }}
+          placeholder="Form heading"
+        />
+      </p>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <input name="name" required maxLength={120} placeholder="Name" className={inputClass} />

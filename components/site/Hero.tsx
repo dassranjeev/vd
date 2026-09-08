@@ -27,7 +27,11 @@ export function Hero({
   const nameY = useTransform(scrollYProgress, [0, 1], [0, -40]);
 
   const { editing } = useEditor();
-  const roles = site.roles.filter(Boolean);
+  // Carry the original index: the settings path has to point at the stored
+  // slot, not at the position in the filtered list.
+  const roles = site.roles
+    .map((role, index) => ({ role, index }))
+    .filter(({ role }) => Boolean(role));
 
   return (
     <section
@@ -151,24 +155,34 @@ export function Hero({
             className="mt-7 text-[11px] font-light uppercase tracking-[0.32em] text-white md:text-xs"
             style={{ fontFamily: "'Inter', sans-serif" }}
           >
-            {roles.map((role, index) => (
-              <span key={role}>
-                {index > 0 && <span className="mx-2">|</span>}
-                {role === site.highlightRole ? (
-                  <span
-                    style={{
-                      color: "#fff",
-                      textShadow:
-                        "0 0 18px rgba(255,110,30,0.95), 0 0 40px rgba(255,80,10,0.7), 0 0 80px rgba(220,60,0,0.45)",
-                    }}
-                  >
-                    {role}
-                  </span>
-                ) : (
-                  role
-                )}
-              </span>
-            ))}
+            {roles.map(({ role, index }, position) => {
+              const editableRole = (
+                <Editable
+                  value={role}
+                  target={{ kind: "setting", group: "site", path: `roles.${index}` }}
+                  placeholder="Role"
+                />
+              );
+
+              return (
+                <span key={index}>
+                  {position > 0 && <span className="mx-2">|</span>}
+                  {role === site.highlightRole ? (
+                    <span
+                      style={{
+                        color: "#fff",
+                        textShadow:
+                          "0 0 18px rgba(255,110,30,0.95), 0 0 40px rgba(255,80,10,0.7), 0 0 80px rgba(220,60,0,0.45)",
+                      }}
+                    >
+                      {editableRole}
+                    </span>
+                  ) : (
+                    editableRole
+                  )}
+                </span>
+              );
+            })}
           </motion.p>
         )}
 

@@ -32,6 +32,8 @@ export type PublicSection = {
 };
 
 export type PublicSocialLink = {
+  /** Empty on a seed fallback row, which the editor treats as read-only. */
+  id: string;
   label: string;
   url: string;
 };

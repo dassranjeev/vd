@@ -4,7 +4,11 @@ import { notFound } from "next/navigation";
 
 import { getPostBySlug, getSettings, siteOrigin } from "@/lib/content";
 import { formatPostDate } from "@/lib/utils";
-import { stripMarkup, textProps } from "@/lib/rich-text-shared";
+import { AdminBar } from "@/components/editor/AdminBar";
+import { EditableText } from "@/components/editor/EditableText";
+import { EditorProvider } from "@/components/editor/EditorProvider";
+import { HtmlEditable } from "@/components/editor/HtmlEditable";
+import { stripMarkup } from "@/lib/rich-text-shared";
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -48,7 +52,13 @@ export default async function PostPage({ params }: Params) {
     .filter(Boolean);
 
   return (
-    <main className="min-h-screen bg-background px-6 py-24 md:px-12 md:py-32">
+    <EditorProvider>
+      <AdminBar />
+      <main
+        className="min-h-screen bg-background px-6 py-24 md:px-12 md:py-32"
+        // Leaves room for the admin bar; 0px for visitors.
+        style={{ paddingTop: "var(--vd-adminbar, 0px)" }}
+      >
       <article className="mx-auto max-w-[720px]">
         <Link
           href="/blog"
@@ -73,12 +83,24 @@ export default async function PostPage({ params }: Params) {
           className="mt-3 text-3xl font-bold leading-tight tracking-tight text-white md:text-5xl"
           style={{ fontFamily: "'Syne', sans-serif" }}
         >
-          <span {...textProps(post.title)} />
+          <EditableText
+            entity="post"
+            id={post.id}
+            field="title"
+            value={post.title}
+            placeholder="Post title"
+          />
         </h1>
 
-        {post.excerpt && (
-          <p className="mt-5 text-lg leading-relaxed text-white/55" {...textProps(post.excerpt)} />
-        )}
+        <p className="mt-5 text-lg leading-relaxed text-white/55">
+          <EditableText
+            entity="post"
+            id={post.id}
+            field="excerpt"
+            value={post.excerpt}
+            placeholder="Excerpt"
+          />
+        </p>
 
         <div
           className="mt-8 h-px w-16"
@@ -92,10 +114,15 @@ export default async function PostPage({ params }: Params) {
           </div>
         )}
 
-        <div
-          className="vd-prose mt-10 text-base leading-[1.75] text-white/70"
-          dangerouslySetInnerHTML={{ __html: bodyMarkup }}
-        />
+        <div className="mt-10">
+          <HtmlEditable
+            target={{ kind: "collection", entity: "post", id: post.id, field: "body" }}
+            source={post.body}
+            html={bodyMarkup}
+            placeholder="Write the post. Blank lines make paragraphs."
+            className="vd-prose text-base leading-[1.75] text-white/70"
+          />
+        </div>
 
         {tags.length > 0 && (
           <ul className="mt-12 flex flex-wrap gap-2 border-t border-white/[0.07] pt-8">
@@ -119,6 +146,7 @@ export default async function PostPage({ params }: Params) {
           </Link>
         </div>
       </article>
-    </main>
+      </main>
+    </EditorProvider>
   );
 }
