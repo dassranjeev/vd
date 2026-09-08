@@ -7,6 +7,7 @@ import { requireSession } from "@/lib/auth";
 import { revalidateContent } from "@/lib/cache";
 import { getDb, sections, settings } from "@/lib/db";
 import { setPath, type PatchValue } from "@/lib/patch-path";
+import { sanitizeBodyForStorage } from "@/lib/rich-text";
 import { settingsKeys, settingsSchemas, type SettingsKey } from "@/lib/settings";
 
 import { attempt, fail, succeed, type ActionState } from "./types";
@@ -77,8 +78,8 @@ const SECTION_CONFIG_FIELDS = ["body", "eyebrow", "heading", "ctaLabel", "ctaHre
 const SECTION_TEXT_FIELDS = [...SECTION_COLUMNS, ...SECTION_CONFIG_FIELDS] as const;
 export type SectionTextField = (typeof SECTION_TEXT_FIELDS)[number];
 
-/** Prose gets a longer allowance than a heading or label. */
-const MAX_LENGTH: Record<string, number> = { body: 5000 };
+/** Prose gets a longer allowance than a heading or label — HTML needs the room. */
+const MAX_LENGTH: Record<string, number> = { body: 20000 };
 
 /** Inline edit for a section heading, meta label, or any config text field. */
 export async function patchSectionTextAction(input: {
@@ -93,7 +94,10 @@ export async function patchSectionTextAction(input: {
       return fail(`"${input.field}" is not an editable section field.`);
     }
     const field = input.field as SectionTextField;
-    const value = input.value.slice(0, MAX_LENGTH[field] ?? 200);
+    // Sanitize after truncating, not before: a cut through the middle of a tag
+    // leaves markup the allowlist then discards, rather than storing it broken.
+    const truncated = input.value.slice(0, MAX_LENGTH[field] ?? 200);
+    const value = field === "body" ? sanitizeBodyForStorage(truncated) : truncated;
 
     const db = getDb();
     const [existing] = await db

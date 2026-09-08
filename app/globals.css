@@ -172,6 +172,118 @@
   }
 }
 
+/* ── Editor-authored prose ────────────────────────────────────
+   Body copy is stored as HTML and injected with dangerouslySetInnerHTML,
+   so Tailwind's utilities never reach the individual tags. Preflight has
+   already stripped the browser defaults for margins and lists, which is
+   why they have to be restored here — otherwise every paragraph in a
+   section body would render flush against the next one.
+
+   Colour, size and line-height stay on the wrapper and inherit down, so
+   each band keeps its own typography.                                */
+
+.vd-prose {
+  font-family: "Inter", sans-serif;
+}
+
+.vd-prose > :first-child {
+  margin-top: 0;
+}
+
+.vd-prose p,
+.vd-prose ul,
+.vd-prose ol,
+.vd-prose blockquote,
+.vd-prose figure,
+.vd-prose pre {
+  margin-top: 1.5rem;
+}
+
+.vd-prose h2,
+.vd-prose h3,
+.vd-prose h4 {
+  margin-top: 2rem;
+  color: #fff;
+  font-family: "Syne", sans-serif;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.vd-prose h2 { font-size: 1.6em; }
+.vd-prose h3 { font-size: 1.3em; }
+.vd-prose h4 { font-size: 1.1em; }
+
+.vd-prose strong,
+.vd-prose b {
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 600;
+}
+
+.vd-prose em,
+.vd-prose i {
+  font-style: italic;
+}
+
+.vd-prose ul,
+.vd-prose ol {
+  padding-left: 1.4em;
+}
+
+.vd-prose ul { list-style: disc; }
+.vd-prose ol { list-style: decimal; }
+
+.vd-prose li {
+  margin-top: 0.4rem;
+}
+
+.vd-prose a {
+  color: #c8a97e;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: opacity 0.18s ease;
+}
+
+.vd-prose a:hover {
+  opacity: 0.75;
+}
+
+.vd-prose blockquote {
+  border-left: 2px solid rgba(200, 169, 126, 0.5);
+  padding-left: 1.1em;
+  font-style: italic;
+}
+
+.vd-prose img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 2px;
+}
+
+.vd-prose hr {
+  margin: 2.5rem 0;
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.vd-prose code {
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.07);
+  padding: 0.1em 0.35em;
+  font-size: 0.9em;
+}
+
+.vd-prose pre {
+  overflow-x: auto;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.9rem 1rem;
+}
+
+.vd-prose pre code {
+  background: none;
+  padding: 0;
+}
+
 /* ── Front-end editor ─────────────────────────────────────────
    All of this is inert for visitors: the classes are only applied
    once an editing session is confirmed and edit mode is on.       */

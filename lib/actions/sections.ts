@@ -7,6 +7,7 @@ import { recordActivity } from "@/lib/activity";
 import { requireSession } from "@/lib/auth";
 import { revalidateContent } from "@/lib/cache";
 import { getDb, sections } from "@/lib/db";
+import { sanitizeBodyForStorage } from "@/lib/rich-text";
 import { SECTION_TYPES, type SectionType } from "@/lib/types";
 import { slugify } from "@/lib/utils";
 
@@ -31,7 +32,7 @@ const configSchema = z.object({
   /* shared */
   background: z.string().max(40).optional(),
   columns: z.number().int().min(1).max(4).optional(),
-  body: z.string().max(5000).optional(),
+  body: z.string().max(20000).optional(),
 
   /* intro */
   eyebrow: z.string().max(120).optional(),
@@ -70,7 +71,7 @@ function readConfig(form: FormData, type: SectionType) {
   if (type === "intro") {
     candidate.eyebrow = readString(form, "config.eyebrow");
     candidate.heading = readString(form, "config.heading");
-    candidate.body = readString(form, "config.body");
+    candidate.body = sanitizeBodyForStorage(readString(form, "config.body"));
     candidate.imageUrl = readString(form, "config.imageUrl");
     candidate.imageSide = readString(form, "config.imageSide", "right");
     candidate.secondColumn = readString(form, "config.secondColumn", "statement");
@@ -99,7 +100,7 @@ function readConfig(form: FormData, type: SectionType) {
   }
 
   if (type === "richtext") {
-    candidate.body = readString(form, "config.body");
+    candidate.body = sanitizeBodyForStorage(readString(form, "config.body"));
   }
 
   const background = readString(form, "config.background");

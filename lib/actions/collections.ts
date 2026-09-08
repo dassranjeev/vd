@@ -7,6 +7,7 @@ import { recordActivity } from "@/lib/activity";
 import { requireSession } from "@/lib/auth";
 import { revalidateContent } from "@/lib/cache";
 import { getDb, logos, photos, posts, testimonials } from "@/lib/db";
+import { sanitizeBodyForStorage } from "@/lib/rich-text";
 import { slugify } from "@/lib/utils";
 
 import { attempt, fail, readBoolean, readNumber, readString, succeed, type ActionState } from "./types";
@@ -311,7 +312,7 @@ export async function toggleTestimonialAction(form: FormData) {
 const postInput = z.object({
   title: z.string().min(1, "A title is required.").max(200),
   excerpt: z.string().max(600).default(""),
-  body: z.string().max(40000).default(""),
+  body: z.string().max(40000).default("").transform(sanitizeBodyForStorage),
   coverUrl: z.string().max(600).default(""),
   tags: z.string().max(300).default(""),
   published: z.boolean().default(false),
@@ -319,7 +320,10 @@ const postInput = z.object({
 
 /** Rough reading time, so editors do not have to guess. */
 function readingMinutes(body: string) {
-  const words = body.trim().split(/\s+/).filter(Boolean).length;
+  // A body can be HTML now, and tags are not words — strip them before counting
+  // or a heavily marked-up post reads as far longer than it is.
+  const text = body.replace(/<[^>]*>/g, " ").replace(/&[a-z#0-9]+;/gi, " ");
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
   return Math.max(1, Math.round(words / 200));
 }
 

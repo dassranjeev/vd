@@ -102,9 +102,11 @@ function VideoCard({
             >
               {video.title}
             </h4>
-            {(video.client || video.year) && (
+            {/* Client only. The year is still recorded in the admin, but it is
+                not shown on the card. */}
+            {video.client && (
               <p className="mt-0.5 line-clamp-1 text-[10px] uppercase tracking-[0.18em] text-white/40">
-                {[video.client, video.year].filter(Boolean).join(" · ")}
+                {video.client}
               </p>
             )}
           </div>

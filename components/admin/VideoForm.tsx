@@ -25,6 +25,9 @@ export function VideoForm({ video }: { video?: Video }) {
      not helping at all. */
   const [orientationChosen, setOrientationChosen] = useState(Boolean(video));
   const [autoVertical, setAutoVertical] = useState(false);
+  /* Tracked so the preview shows the custom thumbnail as soon as it is set,
+     rather than YouTube's until after a save. */
+  const [thumbnailUrl, setThumbnailUrl] = useState(video?.thumbnailUrl ?? "");
 
   const resolvedId = extractYouTubeId(link);
   const looksValid = /^[a-zA-Z0-9_-]{11}$/.test(resolvedId);
@@ -159,13 +162,14 @@ export function VideoForm({ video }: { video?: Video }) {
                 defaultValue={video?.thumbnailUrl ?? ""}
                 accept="image/*"
                 placeholder="/thumbnails/name.jpg"
+                onValueChange={setThumbnailUrl}
               />
             </Field>
 
-            {looksValid && (
+            {(looksValid || thumbnailUrl) && (
               <div className="mt-4">
                 <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-white/45">
-                  Thumbnail preview
+                  {thumbnailUrl ? "Custom thumbnail — this is what the site shows" : "Thumbnail preview"}
                 </p>
                 <div
                   className={`overflow-hidden rounded-md border border-white/[0.08] bg-black ${
@@ -175,6 +179,7 @@ export function VideoForm({ video }: { video?: Video }) {
                   <VideoThumb
                     youtubeId={resolvedId}
                     orientation={orientation}
+                    thumbnailUrl={thumbnailUrl}
                     alt=""
                     loading="eager"
                     className="h-full w-full object-cover"

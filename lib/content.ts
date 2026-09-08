@@ -5,6 +5,7 @@ import { unstable_cache } from "next/cache";
 
 import { logos, photos, posts, sections, settings, socialLinks, testimonials, tryDb, videos } from "@/lib/db";
 import { seedSections, seedSocialLinks, seedVideos } from "@/lib/db/seed-data";
+import { bodyHtml } from "@/lib/rich-text";
 import { defaultSettings, parseSettings, settingsKeys, type SettingsShape } from "@/lib/settings";
 import type {
   PublicLogo,
@@ -79,10 +80,27 @@ export const getSettings = unstable_cache(loadSettings, ["vd:settings"], {
 
 /* ───────────────────────── sections ───────────────────────── */
 
+/**
+ * Render each section's prose once, here, rather than in every component.
+ *
+ * `config.body` is the editor's source — plain text or hand-written HTML — and
+ * `config.bodyHtml` is the sanitized markup the site displays. Doing it in the
+ * read layer means client components never see unsanitized copy and never need
+ * the sanitizer in their bundle.
+ */
+function withRenderedBody(rows: PublicSection[]): PublicSection[] {
+  return rows.map((row) => {
+    const config = (row.config ?? {}) as Record<string, unknown>;
+    const source = typeof config.body === "string" ? config.body : "";
+    if (!source) return row;
+    return { ...row, config: { ...config, bodyHtml: bodyHtml(source) } };
+  });
+}
+
 function fallbackSections(): PublicSection[] {
   // Fallback rows have no database identity, so the editor treats them as
   // read-only (there is nothing to write to until the DB is seeded).
-  return seedSections.map((section) => ({ id: "", ...section }));
+  return withRenderedBody(seedSections.map((section) => ({ id: "", ...section })));
 }
 
 async function loadSections(): Promise<PublicSection[]> {
@@ -102,7 +120,7 @@ async function loadSections(): Promise<PublicSection[]> {
       .from(sections)
       .where(eq(sections.enabled, true))
       .orderBy(asc(sections.position));
-    return rows.length > 0 ? rows : fallbackSections();
+    return rows.length > 0 ? withRenderedBody(rows) : fallbackSections();
   } catch {
     return fallbackSections();
   }
@@ -305,7 +323,9 @@ export async function getPostBySlug(slug: string) {
   if (!db) return null;
   try {
     const [row] = await db.select().from(posts).where(eq(posts.slug, slug)).limit(1);
-    return row && row.published ? row : null;
+    if (!row || !row.published) return null;
+    // `body` stays the editor's source; `bodyHtml` is what the page renders.
+    return { ...row, bodyHtml: bodyHtml(row.body) };
   } catch {
     return null;
   }

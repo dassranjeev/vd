@@ -35,14 +35,22 @@ export function MediaInput({
   accept = "image/*,video/*",
   placeholder = "/hero.mp4 or https://…",
   id,
+  onValueChange,
 }: {
   name: string;
   defaultValue?: string;
   accept?: string;
   placeholder?: string;
   id?: string;
+  /** Notified on both typing and a finished upload, so a form can preview it. */
+  onValueChange?: (value: string) => void;
 }) {
   const [value, setValue] = useState(defaultValue);
+
+  function update(next: string) {
+    setValue(next);
+    onValueChange?.(next);
+  }
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +82,7 @@ export function MediaInput({
     setProgress(null);
     if (fileRef.current) fileRef.current.value = "";
 
-    if (result.ok) setValue(result.url);
+    if (result.ok) update(result.url);
     else setError(result.error);
   }
 
@@ -89,7 +97,7 @@ export function MediaInput({
           id={id}
           name={name}
           value={value}
-          onChange={(event) => setValue(event.target.value)}
+          onChange={(event) => update(event.target.value)}
           placeholder={placeholder}
         />
         <button

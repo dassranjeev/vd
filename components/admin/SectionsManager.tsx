@@ -247,7 +247,7 @@ function SectionCard({
             <Field
               label="Body copy"
               htmlFor={`body-${section.id}`}
-              help="Plain text. Leave a blank line between paragraphs."
+              help="Plain text or HTML. Blank lines make paragraphs; use &nbsp; for a space that will not collapse."
             >
               <Textarea id={`body-${section.id}`} name="config.body" rows={6} defaultValue={config.body ?? ""} />
             </Field>
@@ -287,7 +287,7 @@ function SectionCard({
                 <Input name="config.heading" defaultValue={config.heading ?? ""} maxLength={200} />
               </Field>
 
-              <Field label="Body copy" help="Plain text. Leave a blank line between paragraphs.">
+              <Field label="Body copy" help="Plain text or HTML. Blank lines make paragraphs; use &nbsp; for a space that will not collapse.">
                 <Textarea name="config.body" rows={6} defaultValue={config.body ?? ""} />
               </Field>
 
@@ -463,7 +463,7 @@ function AddSection() {
         )}
 
         {type === "richtext" && (
-          <Field label="Body copy" htmlFor="new-body">
+          <Field label="Body copy" htmlFor="new-body" help="Plain text or HTML. Blank lines make paragraphs; use &nbsp; for a space that will not collapse.">
             <Textarea id="new-body" name="config.body" rows={4} />
           </Field>
         )}

@@ -66,7 +66,13 @@ export type SectionConfig = {
   autoScrollSeconds?: number;
   /** Let the mouse wheel scroll a marquee band sideways. */
   wheelScroll?: boolean;
+  /** Prose source as the editor typed it: plain text or hand-written HTML. */
   body?: string;
+  /**
+   * `body` rendered to safe markup by `lib/content.ts`. Always read this when
+   * displaying the copy — `body` is the editor's source, not output.
+   */
+  bodyHtml?: string;
 
   /* intro */
   eyebrow?: string;

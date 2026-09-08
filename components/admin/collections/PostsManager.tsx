@@ -65,7 +65,7 @@ export function PostsManager({ posts }: { posts: Post[] }) {
 
             <Field
               label="Body"
-              help="Plain text. Leave a blank line between paragraphs. Reading time is calculated for you."
+              help="Plain text or HTML. Blank lines make paragraphs; use &nbsp; for a space that will not collapse. Reading time is calculated for you."
             >
               <Textarea name="body" defaultValue={post?.body ?? ""} rows={14} className="font-mono text-[13px]" />
             </Field>

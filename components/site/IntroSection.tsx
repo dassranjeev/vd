@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 
 import { Editable } from "@/components/editor/Editable";
 import { useEditor } from "@/components/editor/EditorProvider";
+import { HtmlEditable } from "@/components/editor/HtmlEditable";
 import type { SettingsShape } from "@/lib/settings";
 import { sectionConfig, type PublicSection } from "@/lib/types";
 
@@ -18,8 +19,9 @@ import { AboutStatement } from "./AboutStatement";
  * than stacked as two separate full-width bands.
  *
  * Copy lives in the section's own config rather than a settings group, so a
- * page can carry more than one intro if the story needs it. Body text is split
- * on blank lines and rendered as plain paragraphs — never as HTML.
+ * page can carry more than one intro if the story needs it. The body is edited
+ * as HTML source and arrives here already sanitized and rendered as
+ * `config.bodyHtml` — see lib/rich-text.ts.
  */
 export function IntroSection({
   section,
@@ -31,10 +33,8 @@ export function IntroSection({
   const { editing } = useEditor();
   const config = sectionConfig(section);
 
-  const paragraphs = (config.body ?? "")
-    .split(/\n{2,}/)
-    .map((part) => part.trim())
-    .filter(Boolean);
+  const bodySource = config.body ?? "";
+  const bodyMarkup = config.bodyHtml ?? "";
 
   // Legacy rows predate this option: fall back to the image behaviour they had.
   const second = config.secondColumn ?? (config.imageUrl ? "image" : "none");
@@ -42,7 +42,7 @@ export function IntroSection({
   const showImage = second === "image";
   const twoColumns = showStatement || showImage || editing;
 
-  const hasContent = Boolean(config.heading || paragraphs.length > 0 || showStatement || config.imageUrl);
+  const hasContent = Boolean(config.heading || bodyMarkup || showStatement || config.imageUrl);
   if (!hasContent && !editing) return null;
 
   const imageFirst = config.imageSide === "left";
@@ -105,27 +105,24 @@ export function IntroSection({
             </h2>
           )}
 
-          {/* Edited as one block so paragraph breaks stay meaningful. */}
-          {section.id && editing ? (
+          {/* One HTML block, so paragraphs and deliberate spacing both survive. */}
+          {section.id ? (
             <div className="mt-7">
-              <Editable
-                value={config.body ?? ""}
-                target={{ kind: "section", id: section.id, field: "body" }}
-                multiline
+              <HtmlEditable
+                sectionId={section.id}
+                source={bodySource}
+                html={bodyMarkup}
                 placeholder="Tell the story. Leave a blank line between paragraphs."
-                className="text-base leading-relaxed text-white/55 md:text-[17px]"
+                className="vd-prose text-[15px] leading-[1.75] text-white/55 md:text-base"
               />
             </div>
           ) : (
-            paragraphs.map((paragraph, index) => (
-              <p
-                key={index}
-                className="mt-6 text-[15px] leading-[1.75] text-white/55 md:text-base"
-                style={{ fontFamily: "'Inter', sans-serif" }}
-              >
-                {paragraph}
-              </p>
-            ))
+            bodyMarkup && (
+              <div
+                className="vd-prose mt-7 text-[15px] leading-[1.75] text-white/55 md:text-base"
+                dangerouslySetInnerHTML={{ __html: bodyMarkup }}
+              />
+            )
           )}
 
           {config.ctaLabel && config.ctaHref && (

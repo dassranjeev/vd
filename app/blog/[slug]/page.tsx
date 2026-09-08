@@ -37,12 +37,9 @@ export default async function PostPage({ params }: Params) {
   // getPostBySlug returns null for drafts too, so unpublished posts 404.
   if (!post) notFound();
 
-  // Body is stored as plain text and rendered as paragraphs — never as HTML,
-  // so a post can't inject markup into the site.
-  const paragraphs = post.body
-    .split(/\n{2,}/)
-    .map((part) => part.trim())
-    .filter(Boolean);
+  // `bodyHtml` is the post's body run through the allowlist in lib/rich-text.ts,
+  // so hand-written HTML is honoured without letting a post inject anything.
+  const bodyMarkup = post.bodyHtml;
 
   const tags = post.tags
     .split(",")
@@ -94,17 +91,10 @@ export default async function PostPage({ params }: Params) {
           </div>
         )}
 
-        <div className="mt-10">
-          {paragraphs.map((paragraph, index) => (
-            <p
-              key={index}
-              className="mt-6 text-base leading-[1.75] text-white/70"
-              style={{ fontFamily: "'Inter', sans-serif" }}
-            >
-              {paragraph}
-            </p>
-          ))}
-        </div>
+        <div
+          className="vd-prose mt-10 text-base leading-[1.75] text-white/70"
+          dangerouslySetInnerHTML={{ __html: bodyMarkup }}
+        />
 
         {tags.length > 0 && (
           <ul className="mt-12 flex flex-wrap gap-2 border-t border-white/[0.07] pt-8">

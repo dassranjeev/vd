@@ -1,19 +1,22 @@
+import { HtmlEditable } from "@/components/editor/HtmlEditable";
 import { sectionConfig, type PublicSection } from "@/lib/types";
 
 /**
- * A free-form copy band an editor can add anywhere in the page order. Body text
- * is rendered as plain paragraphs (split on blank lines), never as HTML, so the
- * CMS can't be used to inject markup into the public site.
+ * A free-form copy band an editor can add anywhere in the page order.
+ *
+ * The body is authored as HTML source in the front-end editor and reaches this
+ * component already sanitized and rendered, as `config.bodyHtml` — the
+ * allowlist in lib/rich-text.ts is what keeps the CMS from being a way to
+ * inject arbitrary markup into the public site.
  */
 export function RichTextSection({ section }: { section: PublicSection }) {
   const config = sectionConfig(section);
-  const body = (config.body ?? "").trim();
-  const paragraphs = body
-    .split(/\n{2,}/)
-    .map((part) => part.trim())
-    .filter(Boolean);
+  const bodySource = config.body ?? "";
+  const bodyMarkup = config.bodyHtml ?? "";
 
-  if (!section.title && paragraphs.length === 0) return null;
+  if (!section.title && !section.subtitle && !bodyMarkup) return null;
+
+  const proseClass = "vd-prose mt-6 text-base leading-relaxed text-white/50 md:text-lg";
 
   return (
     <section
@@ -29,15 +32,20 @@ export function RichTextSection({ section }: { section: PublicSection }) {
         {section.subtitle && (
           <p className="mt-3 text-2xl font-light text-white/80 md:text-3xl">{section.subtitle}</p>
         )}
-        {paragraphs.map((paragraph, index) => (
-          <p
-            key={index}
-            className="mt-6 text-base leading-relaxed text-white/50 md:text-lg"
-            style={{ fontFamily: "'Inter', sans-serif" }}
-          >
-            {paragraph}
-          </p>
-        ))}
+
+        {section.id ? (
+          <HtmlEditable
+            sectionId={section.id}
+            source={bodySource}
+            html={bodyMarkup}
+            placeholder="Add copy for this band. Blank lines make paragraphs."
+            className={proseClass}
+          />
+        ) : (
+          bodyMarkup && (
+            <div className={proseClass} dangerouslySetInnerHTML={{ __html: bodyMarkup }} />
+          )
+        )}
       </div>
     </section>
   );
